@@ -1,69 +1,379 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { storage } from "@/services/storage";
+import { UserSettings, MainStory, Quest, Experiment, Skill, QuestChapter, Milestone, FutureVision } from "@/types";
+import { AdventurerStatusCard } from "@/components/AdventurerStatusCard";
+import { DailyCheckInModal } from "@/components/DailyCheckInModal";
+import { QuestCompletionModal } from "@/components/QuestCompletionModal";
+import { WhyExplanationModal } from "@/components/WhyExplanationModal";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { 
+  Sparkles, 
+  HelpCircle, 
+  CheckCircle2, 
+  Plus, 
+  MapPin, 
+  Compass, 
+  Flame, 
+  FlaskConical, 
+  ArrowRight,
+  RefreshCw,
+  Zap
+} from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+
+export default function HomePage() {
+  const router = useRouter();
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [settings, setSettings] = useState<UserSettings | null>(null);
+  const [mainStory, setMainStory] = useState<MainStory | null>(null);
+  const [futureVision, setFutureVision] = useState<FutureVision | null>(null);
+  const [todaysQuests, setTodaysQuests] = useState<Quest[]>([]);
+  const [activeExperiments, setActiveExperiments] = useState<Experiment[]>([]);
+  const [skills, setSkills] = useState<Skill[]>([]);
+  const [chapters, setChapters] = useState<QuestChapter[]>([]);
+  const [milestones, setMilestones] = useState<Milestone[]>([]);
+
+  // Modals state
+  const [isCheckInOpen, setIsCheckInOpen] = useState(false);
+  const [completedQuest, setCompletedQuest] = useState<Quest | null>(null);
+  const [levelUpData, setLevelUpData] = useState<{ leveledUp: boolean; newLevel: number }>({ leveledUp: false, newLevel: 1 });
+  const [whyQuest, setWhyQuest] = useState<Quest | null>(null);
+
+  const loadData = () => {
+    const st = storage.getSettings();
+    setSettings(st);
+
+    // If onboarding not completed, we automatically offer onboarding
+    if (!st.onboardingCompleted) {
+      router.push("/onboarding");
+      return;
+    }
+
+    const stories = storage.getStories();
+    const active = stories.find(s => s.status === "active") || null;
+    setMainStory(active);
+    setFutureVision(storage.getFutureVision());
+
+    const allQuests = storage.getQuests();
+    setTodaysQuests(allQuests.filter(q => q.status === "active"));
+
+    const exps = storage.getExperiments();
+    setActiveExperiments(exps.filter(e => e.status === "active"));
+
+    setSkills(storage.getSkills());
+    setChapters(storage.getChapters());
+    setMilestones(storage.getMilestones());
+    setIsLoaded(true);
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const handleQuestComplete = (quest: Quest) => {
+    // 1. Consume MP if available
+    const st = storage.getSettings();
+    if (st.currentMp < quest.mpCost) {
+      alert(`MPが足りません（必要MP: ${quest.mpCost} / 現在MP: ${st.currentMp}）。朝のチェックインで回復するか、難易度の低いクエストを選びましょう！`);
+      return;
+    }
+    
+    st.currentMp = Math.max(0, st.currentMp - quest.mpCost);
+    storage.saveSettings(st);
+
+    // 2. Mark quest as completed
+    const allQuests = storage.getQuests();
+    const updated = allQuests.map(q => q.id === quest.id ? { ...q, status: "completed" as const, completedAt: Date.now() } : q);
+    storage.saveQuests(updated);
+
+    // 3. Add XP and Gold
+    const xpResult = storage.addExperience(quest.xpReward);
+    storage.addGold(quest.goldReward);
+
+    // 4. Add skill XP
+    if (quest.skillTags && quest.skillTags.length > 0) {
+      quest.skillTags.forEach(tag => {
+        storage.addSkillExperience(tag, Math.round(quest.xpReward / 2));
+      });
+    }
+
+    // 5. Add Log
+    storage.addStoryLog({
+      id: `log_${Date.now()}`,
+      date: Date.now(),
+      type: "quest_completed",
+      title: `クエスト達成: ${quest.title}`,
+      description: `${quest.xpReward} XP と ${quest.goldReward} Gold を獲得しました。`
+    });
+
+    // 6. Trigger Fanfare Modal
+    setLevelUpData({ leveledUp: xpResult.leveledUp, newLevel: xpResult.newLevel });
+    setCompletedQuest(quest);
+
+    // Refresh UI
+    loadData();
+  };
+
+  const handleLoadSample = () => {
+    storage.loadSamplePreset();
+    loadData();
+  };
+
+  if (!isLoaded || !settings) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6 text-stone-500 font-bold">
+        冒険の準備中...
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <main className="flex flex-col min-h-screen p-4 pb-28 mx-auto max-w-md">
+      {/* Adventurer Status Card */}
+      <AdventurerStatusCard 
+        settings={settings} 
+        skills={skills} 
+        onOpenCheckIn={() => setIsCheckInOpen(true)} 
+      />
+
+      {/* Main Story Focus Banner */}
+      {mainStory ? (
+        <section className="mb-6">
+          <div className="flex items-center justify-between mb-2 px-1">
+            <h2 className="text-[11px] font-black text-stone-500 uppercase tracking-widest flex items-center gap-1.5">
+              <Compass className="w-3.5 h-3.5 text-emerald-600" />
+              メインストーリー
+            </h2>
+            <button 
+              onClick={() => router.push("/story")}
+              className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-0.5"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+              冒険の地図へ <ArrowRight className="w-3 h-3" />
+            </button>
+          </div>
+
+          <div 
+            onClick={() => router.push("/story")}
+            className="cursor-pointer glass-panel p-4 rounded-3xl border border-stone-200/80 shadow-sm hover:shadow-md transition-all group"
+          >
+            <div className="flex justify-between items-start mb-2">
+              <h3 className="font-black text-sm text-stone-800 group-hover:text-emerald-700 transition-colors leading-snug">
+                {mainStory.title}
+              </h3>
+              <span className="shrink-0 text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                進行中
+              </span>
+            </div>
+            <p className="text-xs font-medium text-stone-500 line-clamp-2 leading-relaxed mb-3">
+              {mainStory.description}
+            </p>
+
+            <div className="flex items-center justify-between text-[11px] font-bold text-stone-600 mb-1">
+              <span>全体の進行度</span>
+              <span className="font-mono text-emerald-700 font-black">{mainStory.progress}%</span>
+            </div>
+            <Progress value={mainStory.progress} className="h-2 bg-stone-100 *:bg-emerald-600" />
+          </div>
+        </section>
+      ) : (
+        <div className="mb-6 p-4 rounded-3xl bg-amber-50/80 border border-amber-200/80 text-center">
+          <Compass className="w-8 h-8 text-amber-600 mx-auto mb-2" />
+          <h3 className="font-black text-sm text-stone-800">メインストーリーが未設定です</h3>
+          <p className="text-xs font-medium text-stone-600 my-2">
+            まずはコンパスで価値観を見つけるか、サンプルデータを読み込んでみましょう。
           </p>
+          <div className="flex gap-2 mt-3">
+            <Button 
+              onClick={handleLoadSample}
+              className="flex-1 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold py-2 shadow-sm"
+            >
+              サンプルで体験
+            </Button>
+            <Button 
+              onClick={() => router.push("/profile")}
+              variant="outline"
+              className="flex-1 border-amber-400 text-amber-800 text-xs font-bold rounded-xl"
+            >
+              自己探索を行う
+            </Button>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+      )}
+
+      {/* Active Experiments */}
+      {activeExperiments.length > 0 && (
+        <section className="mb-6">
+          <div className="flex items-center justify-between mb-2 px-1">
+            <h2 className="text-[11px] font-black text-stone-500 uppercase tracking-widest flex items-center gap-1.5">
+              <FlaskConical className="w-3.5 h-3.5 text-teal-600" />
+              小さく試す実験 (Experiment)
+            </h2>
+          </div>
+          <div className="space-y-2.5">
+            {activeExperiments.map((exp) => {
+              const daysPassed = Math.floor((Date.now() - (exp.startedAt || Date.now())) / (1000 * 60 * 60 * 24));
+              const remaining = Math.max(0, (exp.durationDays || 30) - daysPassed);
+              return (
+                <div key={exp.id} className="p-4 rounded-2xl bg-teal-50/70 border border-teal-200/70 shadow-sm">
+                  <div className="flex justify-between items-start mb-1">
+                    <h4 className="font-bold text-xs text-teal-950">{exp.title}</h4>
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-teal-200/60 text-teal-800">
+                      残り {remaining} 日
+                    </span>
+                  </div>
+                  {exp.description && (
+                    <p className="text-[11px] font-medium text-teal-800/80 mb-2 leading-relaxed">
+                      {exp.description}
+                    </p>
+                  )}
+                  <Progress value={(daysPassed / (exp.durationDays || 30)) * 100} className="h-1.5 bg-teal-200/50 *:bg-teal-600" />
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* Today's Active Quests */}
+      <section className="mb-6">
+        <div className="flex justify-between items-center mb-3 px-1">
+          <h2 className="text-[11px] font-black text-stone-500 uppercase tracking-widest flex items-center gap-1.5">
+            <Flame className="w-3.5 h-3.5 text-amber-500" />
+            本日のクエスト
+          </h2>
+          <button
+            onClick={() => router.push("/quest-builder")}
+            className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200/60"
           >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            <Plus className="w-3 h-3" /> クエスト作成
+          </button>
         </div>
-      </main>
-    </div>
+
+        {todaysQuests.length === 0 ? (
+          <div className="glass-panel p-6 rounded-3xl border border-dashed border-stone-300 text-center shadow-sm">
+            <div className="w-12 h-12 rounded-2xl bg-stone-100 text-stone-400 mx-auto flex items-center justify-center mb-3">
+              <CheckCircle2 className="w-6 h-6" />
+            </div>
+            <h3 className="font-bold text-sm text-stone-800">現在アクティブなクエストはありません</h3>
+            <p className="text-xs font-medium text-stone-500 mt-1 mb-4">
+              AIと一緒にクエストラインを作成するか、サンプルデータを読み込みましょう。
+            </p>
+            <div className="flex flex-col gap-2">
+              <Button 
+                onClick={() => router.push("/quest-builder")}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl py-5 font-bold text-xs shadow-md shadow-emerald-600/20"
+              >
+                AI Quest Builder を開く
+              </Button>
+              <Button 
+                onClick={handleLoadSample}
+                variant="ghost"
+                className="text-stone-500 hover:text-stone-800 text-xs font-bold"
+              >
+                <RefreshCw className="w-3.5 h-3.5 mr-1" /> サンプルクエストを読み込む
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {todaysQuests.map((quest) => {
+              const diffBadge = quest.difficulty === "easy" 
+                ? { label: "初級 (Easy)", color: "bg-emerald-50 text-emerald-700 border-emerald-200" }
+                : quest.difficulty === "hard"
+                ? { label: "上級 (Hard)", color: "bg-rose-50 text-rose-700 border-rose-200" }
+                : { label: "中級 (Normal)", color: "bg-amber-50 text-amber-700 border-amber-200" };
+
+              return (
+                <div 
+                  key={quest.id} 
+                  className="glass-panel p-4 rounded-2xl border border-stone-200/80 shadow-sm hover:shadow-md transition-all relative group overflow-hidden"
+                >
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-md border ${diffBadge.color}`}>
+                          {diffBadge.label}
+                        </span>
+                        <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200/60 px-2 py-0.5 rounded-md flex items-center gap-0.5 font-mono">
+                          <Zap className="w-3 h-3 fill-indigo-500 text-indigo-500" />
+                          消費 {quest.mpCost} MP
+                        </span>
+                      </div>
+                      <h4 className="font-black text-sm text-stone-800 leading-snug">
+                        {quest.title}
+                      </h4>
+                    </div>
+
+                    {/* WHY Button */}
+                    <button
+                      onClick={() => setWhyQuest(quest)}
+                      className="p-1.5 rounded-full bg-stone-100 hover:bg-amber-100 text-stone-400 hover:text-amber-700 transition-colors shadow-inner"
+                      title="なぜこれをやるのか？"
+                    >
+                      <HelpCircle className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {quest.description && (
+                    <p className="text-xs font-medium text-stone-500 mb-3 leading-relaxed">
+                      {quest.description}
+                    </p>
+                  )}
+
+                  {/* Rewards & Complete Action */}
+                  <div className="flex items-center justify-between pt-2 border-t border-stone-100">
+                    <div className="flex items-center gap-2 text-[11px] font-mono font-bold">
+                      <span className="text-emerald-700 flex items-center gap-0.5">
+                        <Sparkles className="w-3.5 h-3.5 text-emerald-500" /> +{quest.xpReward} XP
+                      </span>
+                      <span className="text-amber-700 flex items-center gap-0.5">
+                        +{quest.goldReward} G
+                      </span>
+                    </div>
+
+                    <Button
+                      onClick={() => handleQuestComplete(quest)}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl py-1.5 px-4 text-xs font-bold shadow-sm active:scale-95 transition-transform"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+                      達成！
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      {/* Modals */}
+      <DailyCheckInModal 
+        isOpen={isCheckInOpen} 
+        onClose={() => setIsCheckInOpen(false)} 
+        onCheckInComplete={loadData} 
+      />
+
+      <QuestCompletionModal
+        quest={completedQuest}
+        leveledUp={levelUpData.leveledUp}
+        newLevel={levelUpData.newLevel}
+        isOpen={!!completedQuest}
+        onClose={() => setCompletedQuest(null)}
+      />
+
+      <WhyExplanationModal
+        quest={whyQuest}
+        chapter={chapters.find(c => c.id === whyQuest?.chapterId)}
+        milestone={milestones.find(m => m.id === whyQuest?.milestoneId)}
+        mainStory={mainStory}
+        futureVision={futureVision}
+        isOpen={!!whyQuest}
+        onClose={() => setWhyQuest(null)}
+      />
+    </main>
   );
 }

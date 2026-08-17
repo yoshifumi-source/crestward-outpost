@@ -1,36 +1,44 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Crestward — Life Navigation RPG
 
-## Getting Started
+Crestward（クレストウォード）は、あなたの人生を「オープンワールドRPG」に見立て、日々のタスクや長期目標をゲームのように楽しむための自己探索＆タスク管理アプリケーションです。
 
-First, run the development server:
+## 特徴
+
+1. **Guided Discovery (自己探索)**
+   - 日記や不満、憧れといった「日々の記録（Evidence）」を入力することで、AIがあなたの価値観や強みを分析します。
+   - 分析された価値観から、あなたが本当に進みたい「メインストーリー（長期目標）」を発見します。
+
+2. **Quest Builder (クエストへの分解)**
+   - 大きな目標を、実行可能な小さな「クエスト」にAIが自動で分解・階層化します（Chapter → Milestone → Quest）。
+   - クエストには難易度が設定され、クリアすることで経験値（XP）やゴールド（Gold）を獲得できます。
+
+3. **Experiment (小さく試す)**
+   - 「いきなり大きな物語を始めるのは怖い」という場合、まずは30日間の「実験（Experiment）」として小さく始めることができます。
+
+4. **Compass (コンパス)**
+   - プロフィール画面（コンパス）で、現在の自分のレベル、獲得したスキル、大切にしている価値観などを一覧できます。
+   - クエストの横にある「？」ボタンを押すと、「なぜ今このタスクをやっているのか」を未来のビジョンから逆算して振り返ることができます。
+
+## 技術スタック
+
+- **フレームワーク**: Next.js 16 (App Router)
+- **UIコンポーネント**: React, Tailwind CSS, shadcn/ui, Lucide Icons
+- **ステート管理**: LocalStorage (完全なクライアントサイドで完結し、プライバシーを保護)
+
+## ローカルでの起動方法
+
+このプロジェクトは Next.js で構築されています。Turbopackとの互換性の問題を回避するため、Webpackを使用して起動します。
 
 ```bash
+# 依存関係のインストール
+npm install
+
+# 開発サーバーの起動 (Webpackを使用)
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+ブラウザで [http://localhost:3000](http://localhost:3000) を開いてアプリケーションにアクセスしてください。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## AI連携について
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Crestwardは、ユーザーのプライバシーを最優先に考えています。アプリ内にAPIキーを直接保存するのではなく、「アプリ内で専用のプロンプトを生成」→「ユーザー自身が普段使っているChatGPTやGeminiに貼り付ける」→「結果のJSONをアプリにインポートする」という安全なフローを採用しています。
