@@ -6,14 +6,15 @@ import { storage } from "@/services/storage";
 import { MainStory, FutureVision, Experiment } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Check, Target, Pencil } from "lucide-react";
+import { Check, Target, Pencil, Compass, FlaskConical, ArrowRight } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 
 export default function StoryCandidatePage() {
   const router = useRouter();
   const [data, setData] = useState<any>(null);
   
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(0);
   const [manualTitle, setManualTitle] = useState("");
   const [manualDescription, setManualDescription] = useState("");
 
@@ -23,6 +24,11 @@ export default function StoryCandidatePage() {
       try {
         const parsed = JSON.parse(raw);
         setData(parsed);
+        if (parsed.storyCandidates && parsed.storyCandidates.length > 0) {
+          setSelectedIndex(0);
+        } else {
+          setSelectedIndex(null);
+        }
       } catch (e) {
         console.error(e);
       }
@@ -33,7 +39,7 @@ export default function StoryCandidatePage() {
     let title = "";
     let description = "";
 
-    if (selectedIndex !== null && data?.storyCandidates) {
+    if (selectedIndex !== null && data?.storyCandidates && data.storyCandidates[selectedIndex]) {
       title = data.storyCandidates[selectedIndex].title;
       description = data.storyCandidates[selectedIndex].description;
     } else {
@@ -41,7 +47,10 @@ export default function StoryCandidatePage() {
       description = manualDescription;
     }
 
-    if (!title.trim()) return;
+    if (!title.trim()) {
+      alert("物語のタイトルを入力してください。");
+      return;
+    }
 
     // Create a new active story
     const stories = storage.getStories();
@@ -62,22 +71,30 @@ export default function StoryCandidatePage() {
 
     storage.saveStories([...updatedStories, newStory]);
 
-    // Update settings
-    const settings = storage.getSettings();
-    settings.onboardingCompleted = true;
-    storage.saveSettings(settings);
-
-    // Save Future Vision if there is one
+    // Save Future Vision if available
     if (selectedIndex !== null && data?.futureScenes && data.futureScenes.length > 0) {
-      const scene = data.futureScenes[0]; // just take the first one for simplicity for now
+      const scene = data.futureScenes[0];
       const vision: FutureVision = {
         id: `vis_${Date.now()}`,
-        content: scene.description,
+        content: scene.description || scene.title,
         createdAt: Date.now(),
         updatedAt: Date.now()
       };
       storage.saveFutureVision(vision);
     }
+
+    // Update settings
+    const settings = storage.getSettings();
+    settings.onboardingCompleted = true;
+    storage.saveSettings(settings);
+
+    storage.addStoryLog({
+      id: `log_${Date.now()}`,
+      date: Date.now(),
+      type: "story_started",
+      title: `新たな物語を開始: ${title}`,
+      description: description
+    });
 
     router.push("/");
   };
@@ -86,7 +103,7 @@ export default function StoryCandidatePage() {
     let title = "";
     let description = "";
 
-    if (selectedIndex !== null && data?.storyCandidates) {
+    if (selectedIndex !== null && data?.storyCandidates && data.storyCandidates[selectedIndex]) {
       title = data.storyCandidates[selectedIndex].title;
       description = data.storyCandidates[selectedIndex].description;
     } else {
@@ -94,13 +111,16 @@ export default function StoryCandidatePage() {
       description = manualDescription;
     }
 
-    if (!title.trim()) return;
+    if (!title.trim()) {
+      alert("実験のタイトルを入力してください。");
+      return;
+    }
 
     const newExperiment: Experiment = {
       id: `exp_${Date.now()}`,
       title: title.trim(),
       description: description.trim(),
-      durationDays: 30, // デフォルト30日
+      durationDays: 30,
       status: "active",
       startedAt: Date.now(),
       relatedValueIds: []
@@ -109,10 +129,17 @@ export default function StoryCandidatePage() {
     const experiments = storage.getExperiments();
     storage.saveExperiments([...experiments, newExperiment]);
 
-    // Update settings
     const settings = storage.getSettings();
     settings.onboardingCompleted = true;
     storage.saveSettings(settings);
+
+    storage.addStoryLog({
+      id: `log_${Date.now()}`,
+      date: Date.now(),
+      type: "experiment_started",
+      title: `30日間の実験を開始: ${title}`,
+      description: description
+    });
 
     router.push("/");
   };
@@ -120,112 +147,136 @@ export default function StoryCandidatePage() {
   const hasCandidates = data?.storyCandidates && data.storyCandidates.length > 0;
 
   return (
-    <div className="min-h-screen flex flex-col p-6 max-w-md mx-auto pt-10 pb-24">
-      <header className="mb-8">
-        <h1 className="text-2xl font-black text-stone-800 tracking-tight mb-2">
-          Choose Your Direction
-        </h1>
-        <p className="text-sm font-medium text-stone-500">
-          ここまでの探索をもとに、次に進む方向（Main Story）を決定します。
+    <div className="min-h-screen flex flex-col p-6 max-w-md mx-auto pt-6 pb-28">
+      <header className="mb-6">
+        <div className="flex items-center gap-2 mb-1">
+          <Compass className="w-5 h-5 text-emerald-600" />
+          <h1 className="text-xl font-black text-stone-800 tracking-tight">
+            冒険の方向（メインストーリー）の決定
+          </h1>
+        </div>
+        <p className="text-xs font-medium text-stone-500 leading-relaxed">
+          ここまでの自己探索をもとに、次に進む方向（メインストーリー）を選択するか、まずは小さく30日間の実験として始めるかを選びます。
         </p>
       </header>
 
       {hasCandidates && (
-        <section className="mb-8">
-          <h2 className="text-sm font-black text-stone-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-            <Target className="w-4 h-4" /> AIからの提案
+        <section className="mb-6">
+          <h2 className="text-[11px] font-black text-stone-500 uppercase tracking-widest mb-3 flex items-center gap-1.5 px-1">
+            <Target className="w-3.5 h-3.5 text-emerald-600" /> 
+            AIからのストーリー候補
           </h2>
-          <div className="space-y-4">
+          <div className="space-y-3">
             {data.storyCandidates.map((c: any, i: number) => {
               const isSelected = selectedIndex === i;
               return (
-                <Card 
+                <div 
                   key={`cand_${i}`} 
-                  className={`cursor-pointer transition-all ${isSelected ? 'bg-emerald-50 border-emerald-500 shadow-md ring-2 ring-emerald-500' : 'bg-white border-stone-200 hover:border-emerald-300'}`}
+                  className={`cursor-pointer p-4 rounded-2xl border transition-all ${
+                    isSelected 
+                      ? 'bg-emerald-50/80 border-emerald-500 shadow-md ring-2 ring-emerald-500/50' 
+                      : 'bg-white border-stone-200 hover:border-emerald-300'
+                  }`}
                   onClick={() => setSelectedIndex(i)}
                 >
-                  <CardContent className="p-5 relative">
+                  <div className="flex justify-between items-start mb-1.5">
+                    <h3 className="text-sm font-black text-stone-800 leading-snug pr-2">
+                      {c.title}
+                    </h3>
                     {isSelected && (
-                      <div className="absolute top-4 right-4 text-emerald-500 bg-emerald-100 p-1 rounded-full">
+                      <div className="text-emerald-600 bg-emerald-100 p-1 rounded-full shrink-0">
                         <Check className="w-4 h-4" />
                       </div>
                     )}
-                    <h3 className="text-lg font-bold text-stone-800 mb-2 pr-8">{c.title}</h3>
-                    <p className="text-sm text-stone-600 mb-4">{c.description}</p>
-                    
-                    {c.realWorldUnlocks && (
-                      <div className="bg-white/60 p-3 rounded-xl">
-                        <span className="block text-[10px] font-black text-emerald-600 mb-1 uppercase">実現すること</span>
-                        <ul className="text-xs text-stone-600 space-y-1 list-disc pl-4">
-                          {c.realWorldUnlocks.map((u: string, j: number) => (
-                            <li key={j}>{u}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+                  </div>
+                  <p className="text-xs font-medium text-stone-600 mb-3 leading-relaxed">
+                    {c.description}
+                  </p>
+                  
+                  {c.realWorldUnlocks && c.realWorldUnlocks.length > 0 && (
+                    <div className="bg-white/80 p-3 rounded-xl border border-emerald-100">
+                      <span className="block text-[10px] font-black text-emerald-700 mb-1 uppercase">
+                        ✨ この冒険で実現すること
+                      </span>
+                      <ul className="text-[11px] text-stone-600 space-y-1 list-disc pl-4 font-medium">
+                        {c.realWorldUnlocks.map((u: string, j: number) => (
+                          <li key={j}>{u}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
               );
             })}
           </div>
         </section>
       )}
 
-      <section className="mb-8">
-        <h2 className="text-sm font-black text-stone-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-          <Pencil className="w-4 h-4" /> 自分で書く
+      {/* Manual Input */}
+      <section className="mb-6">
+        <h2 className="text-[11px] font-black text-stone-500 uppercase tracking-widest mb-3 flex items-center gap-1.5 px-1">
+          <Pencil className="w-3.5 h-3.5 text-stone-500" /> 
+          自分で自由に書く場合
         </h2>
-        <Card 
-          className={`cursor-pointer transition-all ${selectedIndex === null ? 'bg-white border-stone-800 shadow-md ring-2 ring-stone-800' : 'bg-stone-50 border-stone-200'}`}
+        <div 
+          className={`cursor-pointer p-4 rounded-2xl border transition-all ${
+            selectedIndex === null 
+              ? 'bg-white border-stone-800 shadow-md ring-2 ring-stone-800' 
+              : 'bg-stone-50/60 border-stone-200'
+          }`}
           onClick={() => setSelectedIndex(null)}
         >
-          <CardContent className="p-5">
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-stone-500 mb-1">タイトル</label>
-                <input 
-                  type="text" 
-                  placeholder="例：自分を回復・成長させる一人時間を作る"
-                  className="w-full text-sm p-3 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-stone-800"
-                  value={manualTitle}
-                  onChange={(e) => {
-                    setManualTitle(e.target.value);
-                    setSelectedIndex(null);
-                  }}
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-stone-500 mb-1">説明・目的</label>
-                <Textarea 
-                  placeholder="家族との関係を大切にしながら、自分自身のための時間も無理なく維持する。"
-                  className="w-full text-sm p-3 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-stone-800 min-h-[100px] resize-none"
-                  value={manualDescription}
-                  onChange={(e) => {
-                    setManualDescription(e.target.value);
-                    setSelectedIndex(null);
-                  }}
-                />
-              </div>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-[11px] font-bold text-stone-600 mb-1">
+                ストーリーのタイトル
+              </label>
+              <Input 
+                placeholder="例: 自律型プロダクトの開発と自由なライフスタイルの確立"
+                className="text-xs rounded-xl"
+                value={manualTitle}
+                onChange={(e) => {
+                  setManualTitle(e.target.value);
+                  setSelectedIndex(null);
+                }}
+              />
             </div>
-          </CardContent>
-        </Card>
+            <div>
+              <label className="block text-[11px] font-bold text-stone-600 mb-1">
+                目的・目指したい姿
+              </label>
+              <Textarea 
+                placeholder="例: 自身の強みを活かしたWebアプリケーションをリリースし、収益と自由な時間の両立を達成する。"
+                className="text-xs rounded-xl min-h-[80px] resize-none"
+                value={manualDescription}
+                onChange={(e) => {
+                  setManualDescription(e.target.value);
+                  setSelectedIndex(null);
+                }}
+              />
+            </div>
+          </div>
+        </div>
       </section>
 
-      <div className="mt-8 flex flex-col gap-3">
+      {/* Action Buttons */}
+      <div className="mt-auto space-y-2.5">
         <Button 
           onClick={handleConfirm}
-          disabled={(selectedIndex === null && !manualTitle.trim())}
-          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-full py-6 text-lg font-bold shadow-md shadow-emerald-600/20"
+          disabled={selectedIndex === null && !manualTitle.trim()}
+          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl py-6 text-sm font-bold shadow-lg shadow-emerald-600/25"
         >
-          物語を始める (Create Story)
+          <Compass className="w-4 h-4 mr-2" />
+          この物語で冒険を開始する
         </Button>
         <Button 
           onClick={handleExperiment}
           variant="outline"
-          disabled={(selectedIndex === null && !manualTitle.trim())}
-          className="w-full border-emerald-600 text-emerald-600 hover:bg-emerald-50 rounded-full py-6 text-lg font-bold shadow-sm"
+          disabled={selectedIndex === null && !manualTitle.trim()}
+          className="w-full border-teal-600 text-teal-700 hover:bg-teal-50 rounded-2xl py-6 text-xs font-bold shadow-2xs"
         >
-          まずは小さく実験してみる (Start Experiment)
+          <FlaskConical className="w-4 h-4 mr-2 text-teal-600" />
+          まずは小さく30日間の実験として試す
         </Button>
       </div>
     </div>

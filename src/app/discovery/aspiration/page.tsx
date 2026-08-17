@@ -43,13 +43,14 @@ export default function AspirationDiscoveryPage() {
       const evidence: DiscoveryEvidence = {
         id: `ev_${Date.now()}`,
         type: "aspiration",
-        title: "Aspiration Analysis",
+        title: "憧れ・理想の未来の記録",
         content,
         createdAt: Date.now(),
         includedInAnalysis: true,
       };
 
-      const existing = storage.getDiscoveryEvidences();
+      // Filter out previous aspiration evidences to prevent duplicates
+      const existing = storage.getDiscoveryEvidences().filter(e => e.type !== "aspiration");
       storage.saveDiscoveryEvidences([...existing, evidence]);
     }
 
@@ -57,21 +58,25 @@ export default function AspirationDiscoveryPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col p-6 max-w-md mx-auto pt-10">
-      <header className="mb-8 flex flex-col">
-        <Link href={step === 0 ? "/onboarding" : "#"} onClick={(e) => {
-          if (step > 0) {
-            e.preventDefault();
-            setStep(s => s - 1);
-          }
-        }} className="inline-flex items-center text-stone-400 hover:text-stone-600 mb-6 transition-colors">
-          <ArrowLeft className="w-4 h-4 mr-1" /> Back
+    <div className="min-h-screen flex flex-col p-6 max-w-md mx-auto pt-6 pb-20">
+      <header className="mb-6 flex flex-col">
+        <Link 
+          href={step === 0 ? "/onboarding" : "#"} 
+          onClick={(e) => {
+            if (step > 0) {
+              e.preventDefault();
+              setStep(s => s - 1);
+            }
+          }} 
+          className="inline-flex items-center text-stone-400 hover:text-stone-700 text-xs font-bold mb-4 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4 mr-1" /> {step === 0 ? "戻る" : "前の質問へ"}
         </Link>
-        <div className="flex items-center gap-4 mb-4">
-          <Progress value={((step + 1) / QUESTIONS.length) * 100} className="h-1.5 bg-stone-200 *:bg-amber-400" />
-          <span className="text-xs font-mono text-stone-400">{step + 1}/{QUESTIONS.length}</span>
+        <div className="flex items-center gap-3 mb-3">
+          <Progress value={((step + 1) / QUESTIONS.length) * 100} className="h-2 bg-stone-200 *:bg-amber-500 rounded-full" />
+          <span className="text-xs font-mono font-bold text-amber-600 shrink-0">{step + 1} / {QUESTIONS.length}</span>
         </div>
-        <h1 className="text-xl font-bold text-stone-800 leading-snug">
+        <h1 className="text-base font-black text-stone-800 leading-snug">
           {QUESTIONS[step]}
         </h1>
       </header>
@@ -79,7 +84,7 @@ export default function AspirationDiscoveryPage() {
       <div className="flex-1 flex flex-col mb-6">
         <Textarea 
           placeholder="思いつくままに書いてみましょう（スキップも可能です）"
-          className="flex-1 min-h-[200px] resize-none text-base p-4 rounded-2xl bg-white/80 border-white shadow-inner focus-visible:ring-amber-400"
+          className="flex-1 min-h-[220px] resize-none text-sm p-4 rounded-2xl bg-white border-stone-200 shadow-inner focus-visible:ring-amber-400"
           value={answers[step]}
           onChange={(e) => {
             const newAnswers = [...answers];
@@ -90,30 +95,30 @@ export default function AspirationDiscoveryPage() {
         />
       </div>
 
-      <div className="mt-auto flex gap-3">
+      <div className="mt-auto flex gap-2.5">
         {!isLastStep ? (
           <>
             <Button 
               variant="outline"
               onClick={handleNext}
-              className="flex-1 rounded-full py-6 text-stone-500 border-stone-200"
+              className="flex-1 rounded-2xl py-6 text-stone-500 border-stone-300 font-bold text-xs"
             >
-              Skip
+              スキップ
             </Button>
             <Button 
               onClick={handleNext}
-              className="flex-[2] bg-amber-500 hover:bg-amber-600 text-white rounded-full py-6 font-bold shadow-md shadow-amber-500/20"
+              className="flex-[2] bg-amber-500 hover:bg-amber-600 text-white rounded-2xl py-6 font-bold text-sm shadow-md shadow-amber-500/20"
             >
-              Next <ArrowRight className="w-4 h-4 ml-2" />
+              次へ <ArrowRight className="w-4 h-4 ml-1.5" />
             </Button>
           </>
         ) : (
           <Button 
             onClick={handleAnalyze}
-            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-full py-6 text-lg font-bold shadow-md shadow-emerald-600/20"
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl py-6 text-base font-bold shadow-lg shadow-emerald-600/25"
           >
             <Sparkles className="w-5 h-5 mr-2" />
-            Analyze with AI
+            AI自己分析プロンプトを生成する
           </Button>
         )}
       </div>
