@@ -2,33 +2,34 @@
 
 import { useEffect, useState } from "react";
 import { storage } from "@/services/storage";
-import { StoryLog, Reward, UserSettings } from "@/types";
+import { StoryLog, Reward, UserSettings, Quest, MainStory } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { 
   BookOpen, 
   Sparkles, 
   Coins, 
   Award, 
   HelpCircle, 
-  Map, 
-  Compass, 
   Target, 
-  CheckCircle2, 
   Plus, 
   Heart, 
   Zap, 
-  Sun,
-  Flame,
-  Coffee,
-  Check
+  Calendar,
+  CheckCircle2,
+  Trophy,
+  Compass,
+  ArrowRight
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 export default function JournalAndGuidePage() {
-  const [activeTab, setActiveTab] = useState<"logs" | "tavern" | "guide">("guide");
+  const [activeTab, setActiveTab] = useState<"logs" | "tavern" | "guide" | "review">("guide");
   const [logs, setLogs] = useState<StoryLog[]>([]);
   const [rewards, setRewards] = useState<Reward[]>([]);
+  const [quests, setQuests] = useState<Quest[]>([]);
+  const [activeStory, setActiveStory] = useState<MainStory | undefined>(undefined);
   const [settings, setSettings] = useState<UserSettings | null>(null);
 
   // New reward modal
@@ -36,15 +37,25 @@ export default function JournalAndGuidePage() {
   const [newRewardName, setNewRewardName] = useState("");
   const [newRewardCost, setNewRewardCost] = useState(50);
 
+  // Monthly / Weekly Reflection state
+  const [reflectionWins, setReflectionWins] = useState("");
+  const [reflectionLearnings, setReflectionLearnings] = useState("");
+  const [reflectionNextStep, setReflectionNextStep] = useState("");
+  const [reflectionSaved, setReflectionSaved] = useState(false);
+
   const loadData = () => {
     setLogs(storage.getStoryLogs());
     setRewards(storage.getRewards());
+    setQuests(storage.getQuests());
+    setActiveStory(storage.getActiveStory());
     setSettings(storage.getSettings());
   };
 
   useEffect(() => {
     loadData();
   }, []);
+
+  const completedQuestsCount = quests.filter(q => q.status === "completed").length;
 
   const handlePurchaseReward = (reward: Reward) => {
     if (!settings) return;
@@ -85,6 +96,31 @@ export default function JournalAndGuidePage() {
     loadData();
   };
 
+  const handleSaveReflection = () => {
+    if (!reflectionWins.trim() && !reflectionLearnings.trim() && !reflectionNextStep.trim()) return;
+
+    const fullText = `【今期の前進・達成】\n${reflectionWins || "特になし"}\n\n【気づき・工夫】\n${reflectionLearnings || "特になし"}\n\n【次の一歩】\n${reflectionNextStep || "特になし"}`;
+
+    storage.addStoryLog({
+      id: `log_${Date.now()}`,
+      date: Date.now(),
+      type: "journal_insight",
+      title: "冒険の定期振り返りを記録",
+      description: fullText
+    });
+
+    // Award bonus XP and Gold for reflection ritual
+    storage.addExperience(100);
+    storage.addGold(30);
+
+    setReflectionSaved(true);
+    setTimeout(() => setReflectionSaved(false), 4000);
+    setReflectionWins("");
+    setReflectionLearnings("");
+    setReflectionNextStep("");
+    loadData();
+  };
+
   return (
     <main className="flex flex-col min-h-screen p-4 pb-28 mx-auto max-w-md">
       {/* Header */}
@@ -105,33 +141,42 @@ export default function JournalAndGuidePage() {
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex bg-stone-200/70 p-1 rounded-2xl">
+        <div className="grid grid-cols-4 bg-stone-200/70 p-1 rounded-2xl gap-1">
           <button
             onClick={() => setActiveTab("guide")}
-            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 ${
+            className={`py-2 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1 ${
               activeTab === "guide" ? "bg-white text-stone-800 shadow-sm" : "text-stone-500 hover:text-stone-800"
             }`}
           >
-            <HelpCircle className="w-3.5 h-3.5 text-emerald-600" />
-            冒険の手引き
+            <HelpCircle className="w-3 h-3 text-emerald-600" />
+            手引き
           </button>
           <button
             onClick={() => setActiveTab("tavern")}
-            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 ${
+            className={`py-2 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1 ${
               activeTab === "tavern" ? "bg-white text-stone-800 shadow-sm" : "text-stone-500 hover:text-stone-800"
             }`}
           >
-            <Coins className="w-3.5 h-3.5 text-amber-500" />
-            酒場 (リワード)
+            <Coins className="w-3 h-3 text-amber-500" />
+            酒場
+          </button>
+          <button
+            onClick={() => setActiveTab("review")}
+            className={`py-2 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1 ${
+              activeTab === "review" ? "bg-white text-stone-800 shadow-sm" : "text-stone-500 hover:text-stone-800"
+            }`}
+          >
+            <Calendar className="w-3 h-3 text-teal-600" />
+            振り返り
           </button>
           <button
             onClick={() => setActiveTab("logs")}
-            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 ${
+            className={`py-2 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1 ${
               activeTab === "logs" ? "bg-white text-stone-800 shadow-sm" : "text-stone-500 hover:text-stone-800"
             }`}
           >
-            <BookOpen className="w-3.5 h-3.5 text-indigo-500" />
-            冒険の足跡
+            <BookOpen className="w-3 h-3 text-indigo-500" />
+            足跡
           </button>
         </div>
       </header>
@@ -267,7 +312,96 @@ export default function JournalAndGuidePage() {
         </section>
       )}
 
-      {/* TAB 3: 冒険の足跡 (Story Chronicles / Logs) */}
+      {/* TAB 3: 定期振り返り (Reflection & Review) */}
+      {activeTab === "review" && (
+        <section className="space-y-4 animate-fadeIn">
+          {/* Summary stats */}
+          <div className="glass-panel p-4 rounded-3xl border border-stone-200 shadow-2xs">
+            <h2 className="text-xs font-black text-stone-500 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+              <Trophy className="w-4 h-4 text-amber-500" /> 冒険の進捗サマリー
+            </h2>
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="p-3 bg-stone-50 rounded-2xl border border-stone-100">
+                <span className="block text-[10px] font-bold text-stone-400">達成クエスト</span>
+                <span className="text-base font-black text-emerald-600 font-mono">{completedQuestsCount} 件</span>
+              </div>
+              <div className="p-3 bg-stone-50 rounded-2xl border border-stone-100">
+                <span className="block text-[10px] font-bold text-stone-400">冒険者Lv</span>
+                <span className="text-base font-black text-indigo-600 font-mono">Lv.{settings?.level || 1}</span>
+              </div>
+              <div className="p-3 bg-stone-50 rounded-2xl border border-stone-100">
+                <span className="block text-[10px] font-bold text-stone-400">ストーリー進捗</span>
+                <span className="text-base font-black text-amber-600 font-mono">{activeStory?.progress || 0}%</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Reflection Form */}
+          <div className="glass-panel p-5 rounded-3xl border border-stone-200 shadow-2xs space-y-3.5">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-teal-600" />
+              <h3 className="text-sm font-black text-stone-800">冒険の振り返り儀式</h3>
+            </div>
+            <p className="text-xs text-stone-500 leading-relaxed">
+              定期的に前進と学びを言語化することで、経験値（+100 XP）とGold（+30 G）を獲得できます。
+            </p>
+
+            {reflectionSaved && (
+              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs font-bold text-emerald-800 flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                振り返りを記録しました！ (+100 XP, +30 G 獲得！)
+              </div>
+            )}
+
+            <div>
+              <label className="block text-[11px] font-bold text-stone-700 mb-1">
+                🌟 今期、前進したこと・達成できたこと
+              </label>
+              <Textarea 
+                placeholder="例: 朝の集中時間を習慣化できた、配線図を完成させた..."
+                className="text-xs rounded-xl min-h-[65px] resize-none"
+                value={reflectionWins}
+                onChange={(e) => setReflectionWins(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-stone-700 mb-1">
+                💡 手応えのあった工夫・気づき
+              </label>
+              <Textarea 
+                placeholder="例: 前日の夜にタスクを1つ決めておくとスムーズに行動できた..."
+                className="text-xs rounded-xl min-h-[65px] resize-none"
+                value={reflectionLearnings}
+                onChange={(e) => setReflectionLearnings(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-stone-700 mb-1">
+                🚀 次の期間に注力したい一歩
+              </label>
+              <Input 
+                placeholder="例: 第2章のマイルストーンに着手する"
+                className="text-xs rounded-xl"
+                value={reflectionNextStep}
+                onChange={(e) => setReflectionNextStep(e.target.value)}
+              />
+            </div>
+
+            <Button
+              onClick={handleSaveReflection}
+              disabled={!reflectionWins.trim() && !reflectionLearnings.trim() && !reflectionNextStep.trim()}
+              className="w-full bg-teal-600 hover:bg-teal-700 text-white rounded-2xl py-5 font-bold text-xs shadow-md shadow-teal-600/20"
+            >
+              <Sparkles className="w-4 h-4 mr-1.5" />
+              振り返りを完了して報酬を獲得 (+100 XP / +30 G)
+            </Button>
+          </div>
+        </section>
+      )}
+
+      {/* TAB 4: 冒険の足跡 (Story Chronicles / Logs) */}
       {activeTab === "logs" && (
         <section className="space-y-3 animate-fadeIn">
           <h2 className="text-xs font-black text-stone-500 uppercase tracking-widest px-1">
@@ -300,7 +434,7 @@ export default function JournalAndGuidePage() {
                       {log.title}
                     </h4>
                     {log.description && (
-                      <p className="text-[11px] text-stone-500 leading-relaxed">
+                      <p className="text-[11px] text-stone-500 leading-relaxed whitespace-pre-wrap">
                         {log.description}
                       </p>
                     )}
