@@ -9,16 +9,13 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { 
   Map as MapIcon, 
-  Target, 
-  ChevronDown, 
   GitBranch, 
   Plus, 
   Sparkles, 
   CheckCircle2, 
   Circle, 
   Compass, 
-  Flag,
-  RotateCcw
+  Flag
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
@@ -70,7 +67,7 @@ export default function StoryPage() {
       id: `log_${Date.now()}`,
       date: Date.now(),
       type: "story_pivoted",
-      title: `方向転換（ピボット）: ${mainStory.title}`,
+      title: `方針転換（ピボット）: ${mainStory.title}`,
       description: `理由: ${pivotReason}`,
       storyId: mainStory.id,
       metadata: { reason: pivotReason }
@@ -110,7 +107,7 @@ export default function StoryPage() {
             variant="outline"
             className="border-stone-300 text-stone-700 rounded-2xl py-6 font-bold text-sm"
           >
-            自己探索（Guided Discovery）へ
+            自己探索ガイドへ進む
           </Button>
         </div>
       </main>
@@ -125,7 +122,7 @@ export default function StoryPage() {
           <div className="flex items-center gap-1.5">
             <MapIcon className="w-4 h-4 text-emerald-600" />
             <h1 className="text-[11px] font-black text-emerald-800 uppercase tracking-widest">
-              冒険の地図 (Story Roadmap)
+              物語の航海図（ストーリーマップ）
             </h1>
           </div>
           <button 
@@ -133,7 +130,7 @@ export default function StoryPage() {
             className="flex items-center gap-1 text-[11px] font-bold text-stone-500 bg-white border border-stone-200 px-2.5 py-1 rounded-full hover:bg-stone-50 transition-colors shadow-sm"
           >
             <GitBranch className="w-3.5 h-3.5 text-purple-600" />
-            方向転換 (Pivot)
+            方針転換（ピボット）
           </button>
         </div>
 
@@ -165,7 +162,7 @@ export default function StoryPage() {
           <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/70 shadow-sm">
             <div className="flex items-center gap-1.5 text-[10px] font-black text-amber-800 uppercase tracking-widest mb-1">
               <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-              目指している未来の情景 (Vision)
+              目指している未来の情景
             </div>
             <p className="text-xs font-bold text-amber-950 leading-relaxed italic">
               “{futureVision.content}”
@@ -192,13 +189,13 @@ export default function StoryPage() {
         {chapters.length === 0 ? (
           <div className="p-6 rounded-3xl bg-white border border-stone-200 text-center">
             <p className="text-xs font-bold text-stone-600 mb-3">
-              まだチャプター構造がありません。Quest Builderでクエストラインを生成しましょう。
+              まだチャプター構造がありません。クエスト作成工房でクエストラインを生成しましょう。
             </p>
             <Button 
               onClick={() => router.push("/quest-builder")}
               className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold py-2.5"
             >
-              Quest Builder を開く
+              クエスト作成工房を開く
             </Button>
           </div>
         ) : (
@@ -220,7 +217,7 @@ export default function StoryPage() {
                         {chapter.title}
                       </h4>
                       <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                        Chapter {chIdx + 1}
+                        第 {chIdx + 1} 章
                       </span>
                     </div>
 
@@ -281,7 +278,7 @@ export default function StoryPage() {
               <GitBranch className="w-6 h-6" />
             </div>
             <DialogTitle className="text-lg font-black text-stone-800">
-              方向転換（ピボット）しますか？
+              方針転換（ピボット）しますか？
             </DialogTitle>
             <DialogDescription className="text-xs font-medium text-stone-500">
               目標が変わることは失敗ではありません。新しい冒険への進化です。理由を記録して次の物語へ進みましょう。
@@ -290,7 +287,7 @@ export default function StoryPage() {
 
           <div className="py-2">
             <label className="block text-xs font-bold text-stone-700 mb-1.5">
-              方向転換の理由
+              方針転換の理由
             </label>
             <Textarea 
               value={pivotReason}
@@ -306,7 +303,7 @@ export default function StoryPage() {
               disabled={!pivotReason.trim()}
               className="w-full bg-purple-600 hover:bg-purple-700 text-white rounded-2xl py-5 font-bold text-xs shadow-md"
             >
-              方向転換を記録して完了
+              方針転換を記録して完了
             </Button>
             <Button 
               onClick={() => setIsPivotDialogOpen(false)}

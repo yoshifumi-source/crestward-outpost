@@ -248,13 +248,13 @@ export default function JournalAndGuidePage() {
               <div className="w-7 h-7 rounded-xl bg-indigo-100 text-indigo-800 font-black text-xs flex items-center justify-center">
                 3
               </div>
-              <h3 className="font-black text-sm text-stone-800">コンパスとAI自己探索</h3>
+              <h3 className="font-black text-sm text-stone-800">コンパスと自己探索ガイド</h3>
             </div>
             <p className="text-xs text-stone-600 leading-relaxed mb-2">
-              「コンパス」画面では、自分が大切にしたい価値観（Values）や抱えているギャップ（Tensions）を確認できます。
+              「コンパス」画面では、自分が大切にしたい価値観や、現状と理想のギャップを確認できます。
             </p>
             <p className="text-[11px] text-stone-500 bg-stone-50 p-2.5 rounded-xl border border-stone-100">
-              💡 迷ったときはいつでも「Guided Discovery」でAIプロンプトを生成し、ChatGPT等に相談して自分らしい物語をインポートできます。
+              💡 迷ったときはいつでも「自己探索ガイド」でAIプロンプトを生成し、ChatGPT等に相談して自分らしい物語を取り込むことができます。
             </p>
           </div>
 

@@ -14,12 +14,9 @@ import {
   User, 
   Award, 
   Coins, 
-  Flame, 
   Shield, 
-  RefreshCw,
-  Edit3
+  RefreshCw
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 export default function CompassPage() {
   const router = useRouter();
@@ -28,7 +25,6 @@ export default function CompassPage() {
   const [values, setValues] = useState<Value[]>([]);
   const [tensions, setTensions] = useState<Tension[]>([]);
   const [futureScenes, setFutureScenes] = useState<FutureScene[]>([]);
-  const [futureVision, setFutureVision] = useState<FutureVision | null>(null);
   const [skills, setSkills] = useState<Skill[]>([]);
 
   const loadData = () => {
@@ -36,7 +32,6 @@ export default function CompassPage() {
     setValues(storage.getValues());
     setTensions(storage.getTensions());
     setFutureScenes(storage.getFutureScenes());
-    setFutureVision(storage.getFutureVision());
     setSkills(storage.getSkills());
     setIsLoaded(true);
   };
@@ -65,7 +60,7 @@ export default function CompassPage() {
           <div className="flex items-center gap-1.5">
             <Compass className="w-4 h-4 text-emerald-600 animate-spin-slow" />
             <h1 className="text-[11px] font-black text-emerald-800 uppercase tracking-widest">
-              自己の羅針盤 (Compass)
+              自己の羅針盤（コンパス）
             </h1>
           </div>
           <button
@@ -127,7 +122,7 @@ export default function CompassPage() {
                 <Compass className="w-5 h-5 text-emerald-400 group-hover:rotate-45 transition-transform duration-500" />
               </div>
               <div>
-                <h3 className="text-sm font-black text-stone-100">Guided Discovery (自己探索)</h3>
+                <h3 className="text-sm font-black text-stone-100">自己探索ガイド（AI分析）</h3>
                 <p className="text-[11px] text-stone-400">AIと一緒に新しい価値観と物語を深掘りする</p>
               </div>
             </div>
@@ -141,13 +136,13 @@ export default function CompassPage() {
         <div className="flex items-center justify-between mb-3 px-1">
           <h3 className="text-[11px] font-black text-stone-500 uppercase tracking-widest flex items-center gap-1.5">
             <Heart className="w-3.5 h-3.5 text-rose-500" />
-            価値観の柱 (Values)
+            大切にしたい価値観
           </h3>
         </div>
 
         {values.length === 0 ? (
           <div className="p-5 rounded-2xl bg-stone-100/60 text-center text-xs font-bold text-stone-500">
-            まだ価値観が登録されていません。Guided Discoveryで抽出しましょう。
+            まだ価値観が登録されていません。自己探索ガイドで抽出しましょう。
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-2.5">
@@ -174,7 +169,7 @@ export default function CompassPage() {
           <div className="flex items-center justify-between mb-3 px-1">
             <h3 className="text-[11px] font-black text-stone-500 uppercase tracking-widest flex items-center gap-1.5">
               <Target className="w-3.5 h-3.5 text-indigo-600" />
-              抱えているギャップ (Tensions)
+              現状と理想のギャップ
             </h3>
           </div>
           <div className="space-y-3">
@@ -203,7 +198,7 @@ export default function CompassPage() {
           <div className="flex items-center justify-between mb-3 px-1">
             <h3 className="text-[11px] font-black text-stone-500 uppercase tracking-widest flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-              未来の情景 (Future Scenes)
+              目指す未来の情景
             </h3>
           </div>
           <div className="space-y-3">

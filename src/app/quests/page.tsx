@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { storage } from "@/services/storage";
 import { Quest, QuestChapter, Milestone, QuestDifficulty, MainStory } from "@/types";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,10 +13,7 @@ import {
   Sparkles, 
   Plus, 
   HelpCircle, 
-  Filter, 
   Zap, 
-  Circle, 
-  Flame, 
   Coins 
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -139,7 +135,7 @@ export default function QuestsPage() {
           <div className="flex items-center gap-1.5">
             <Target className="w-4 h-4 text-emerald-600" />
             <h1 className="text-[11px] font-black text-emerald-800 uppercase tracking-widest">
-              クエスト掲示板 (Quests Board)
+              クエスト掲示板
             </h1>
           </div>
           <div className="flex items-center gap-1.5">
@@ -203,7 +199,7 @@ export default function QuestsPage() {
                   : "bg-white text-stone-600 border border-stone-200/80 hover:bg-stone-50"
               }`}
             >
-              {d === "all" ? "難易度: すべて" : d === "easy" ? "初級 (Easy)" : d === "hard" ? "上級 (Hard)" : "中級 (Normal)"}
+              {d === "all" ? "難易度: すべて" : d === "easy" ? "初級" : d === "hard" ? "上級" : "中級"}
             </button>
           ))}
         </div>
@@ -227,13 +223,12 @@ export default function QuestsPage() {
           filteredQuests.map((quest) => {
             const isCompleted = quest.status === "completed";
             const ms = milestones.find(m => m.id === quest.milestoneId);
-            const ch = chapters.find(c => c.id === quest.chapterId);
 
             const diffBadge = quest.difficulty === "easy" 
-              ? { label: "Easy", color: "bg-emerald-50 text-emerald-700 border-emerald-200" }
+              ? { label: "初級", color: "bg-emerald-50 text-emerald-700 border-emerald-200" }
               : quest.difficulty === "hard"
-              ? { label: "Hard", color: "bg-rose-50 text-rose-700 border-rose-200" }
-              : { label: "Normal", color: "bg-amber-50 text-amber-700 border-amber-200" };
+              ? { label: "上級", color: "bg-rose-50 text-rose-700 border-rose-200" }
+              : { label: "中級", color: "bg-amber-50 text-amber-700 border-amber-200" };
 
             return (
               <div 
@@ -260,7 +255,7 @@ export default function QuestsPage() {
                   <button
                     onClick={() => setWhyQuest(quest)}
                     className="p-1.5 rounded-full bg-stone-100 hover:bg-amber-100 text-stone-400 hover:text-amber-700 transition-colors shrink-0"
-                    title="なぜこれをやるのか？"
+                    title="なぜこのクエストをやるのか？"
                   >
                     <HelpCircle className="w-3.5 h-3.5" />
                   </button>

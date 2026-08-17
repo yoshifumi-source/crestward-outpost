@@ -28,35 +28,35 @@ export function WhyExplanationModal({
 
   const steps = [
     {
-      level: "現在のクエスト (Quest)",
+      level: "現在挑戦中のクエスト",
       title: quest.title,
       icon: Target,
       color: "border-emerald-500 bg-emerald-50 text-emerald-800",
       badgeColor: "bg-emerald-600 text-white"
     },
     ...(milestone ? [{
-      level: "マイルストーン (Milestone)",
+      level: "中間目標（マイルストーン）",
       title: milestone.title,
       icon: Flag,
       color: "border-teal-400 bg-teal-50 text-teal-900",
       badgeColor: "bg-teal-600 text-white"
     }] : []),
     ...(chapter ? [{
-      level: "チャプター (Chapter)",
+      level: "物語の章（チャプター）",
       title: chapter.title,
       icon: MapPin,
       color: "border-indigo-400 bg-indigo-50 text-indigo-900",
       badgeColor: "bg-indigo-600 text-white"
     }] : []),
     ...(mainStory ? [{
-      level: "メインストーリー (Main Story)",
+      level: "メインストーリー（大きな方向性）",
       title: mainStory.title,
       icon: Compass,
       color: "border-amber-400 bg-amber-50 text-amber-900",
       badgeColor: "bg-amber-600 text-white"
     }] : []),
     ...(futureVision ? [{
-      level: "目指す未来の情景 (Future Vision)",
+      level: "目指している未来の情景",
       title: futureVision.content,
       icon: Sparkles,
       color: "border-purple-400 bg-purple-50 text-purple-900",
@@ -72,7 +72,7 @@ export function WhyExplanationModal({
             <Compass className="w-5 h-5 animate-spin-slow" />
           </div>
           <DialogTitle className="text-lg font-black text-stone-800">
-            なぜこれをやるのか？ (WHY)
+            このクエストを行う目的（WHY）
           </DialogTitle>
           <DialogDescription className="text-xs font-medium text-stone-500">
             小さなクエストが、あなたの目指す未来とどのように繋がっているかを確認できます。

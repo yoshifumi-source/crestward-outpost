@@ -40,8 +40,8 @@ export function QuestCompletionModal({
         {/* Level Up Banner */}
         {leveledUp ? (
           <div className="mb-2">
-            <span className="inline-block px-3 py-1 rounded-full text-xs font-black bg-gradient-to-r from-amber-500 to-yellow-400 text-stone-900 shadow-md uppercase tracking-wider animate-pulse">
-              🎉 LEVEL UP !
+            <span className="inline-block px-3 py-1 rounded-full text-xs font-black bg-gradient-to-r from-amber-500 to-yellow-400 text-stone-900 shadow-md tracking-wider animate-pulse">
+              🎉 レベルアップ！
             </span>
             <h2 className="text-xl font-black text-stone-800 mt-2">
               Lv. {newLevel} に到達！
@@ -53,10 +53,10 @@ export function QuestCompletionModal({
         ) : (
           <div className="mb-2">
             <span className="inline-block px-3 py-1 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-700 uppercase tracking-widest">
-              QUEST COMPLETED
+              クエスト達成
             </span>
             <h2 className="text-lg font-black text-stone-800 mt-2 leading-snug">
-              クエスト達成！
+              クエストクリア！
             </h2>
           </div>
         )}

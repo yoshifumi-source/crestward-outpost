@@ -8,14 +8,12 @@ import { AdventurerStatusCard } from "@/components/AdventurerStatusCard";
 import { DailyCheckInModal } from "@/components/DailyCheckInModal";
 import { QuestCompletionModal } from "@/components/QuestCompletionModal";
 import { WhyExplanationModal } from "@/components/WhyExplanationModal";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
   Sparkles, 
   HelpCircle, 
   CheckCircle2, 
   Plus, 
-  MapPin, 
   Compass, 
   Flame, 
   FlaskConical, 
@@ -47,7 +45,6 @@ export default function HomePage() {
     const st = storage.getSettings();
     setSettings(st);
 
-    // If onboarding not completed, we automatically offer onboarding
     if (!st.onboardingCompleted) {
       router.push("/onboarding");
       return;
@@ -75,7 +72,6 @@ export default function HomePage() {
   }, []);
 
   const handleQuestComplete = (quest: Quest) => {
-    // 1. Consume MP if available
     const st = storage.getSettings();
     if (st.currentMp < quest.mpCost) {
       alert(`MPが足りません（必要MP: ${quest.mpCost} / 現在MP: ${st.currentMp}）。朝のチェックインで回復するか、難易度の低いクエストを選びましょう！`);
@@ -85,23 +81,19 @@ export default function HomePage() {
     st.currentMp = Math.max(0, st.currentMp - quest.mpCost);
     storage.saveSettings(st);
 
-    // 2. Mark quest as completed
     const allQuests = storage.getQuests();
     const updated = allQuests.map(q => q.id === quest.id ? { ...q, status: "completed" as const, completedAt: Date.now() } : q);
     storage.saveQuests(updated);
 
-    // 3. Add XP and Gold
     const xpResult = storage.addExperience(quest.xpReward);
     storage.addGold(quest.goldReward);
 
-    // 4. Add skill XP
     if (quest.skillTags && quest.skillTags.length > 0) {
       quest.skillTags.forEach(tag => {
         storage.addSkillExperience(tag, Math.round(quest.xpReward / 2));
       });
     }
 
-    // 5. Add Log
     storage.addStoryLog({
       id: `log_${Date.now()}`,
       date: Date.now(),
@@ -110,11 +102,8 @@ export default function HomePage() {
       description: `${quest.xpReward} XP と ${quest.goldReward} Gold を獲得しました。`
     });
 
-    // 6. Trigger Fanfare Modal
     setLevelUpData({ leveledUp: xpResult.leveledUp, newLevel: xpResult.newLevel });
     setCompletedQuest(quest);
-
-    // Refresh UI
     loadData();
   };
 
@@ -210,7 +199,7 @@ export default function HomePage() {
           <div className="flex items-center justify-between mb-2 px-1">
             <h2 className="text-[11px] font-black text-stone-500 uppercase tracking-widest flex items-center gap-1.5">
               <FlaskConical className="w-3.5 h-3.5 text-teal-600" />
-              小さく試す実験 (Experiment)
+              小さく試す30日間の実験
             </h2>
           </div>
           <div className="space-y-2.5">
@@ -267,7 +256,7 @@ export default function HomePage() {
                 onClick={() => router.push("/quest-builder")}
                 className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl py-5 font-bold text-xs shadow-md shadow-emerald-600/20"
               >
-                AI Quest Builder を開く
+                クエスト作成工房を開く
               </Button>
               <Button 
                 onClick={handleLoadSample}
@@ -282,10 +271,10 @@ export default function HomePage() {
           <div className="space-y-3">
             {todaysQuests.map((quest) => {
               const diffBadge = quest.difficulty === "easy" 
-                ? { label: "初級 (Easy)", color: "bg-emerald-50 text-emerald-700 border-emerald-200" }
+                ? { label: "初級", color: "bg-emerald-50 text-emerald-700 border-emerald-200" }
                 : quest.difficulty === "hard"
-                ? { label: "上級 (Hard)", color: "bg-rose-50 text-rose-700 border-rose-200" }
-                : { label: "中級 (Normal)", color: "bg-amber-50 text-amber-700 border-amber-200" };
+                ? { label: "上級", color: "bg-rose-50 text-rose-700 border-rose-200" }
+                : { label: "中級", color: "bg-amber-50 text-amber-700 border-amber-200" };
 
               return (
                 <div 
@@ -312,7 +301,7 @@ export default function HomePage() {
                     <button
                       onClick={() => setWhyQuest(quest)}
                       className="p-1.5 rounded-full bg-stone-100 hover:bg-amber-100 text-stone-400 hover:text-amber-700 transition-colors shadow-inner"
-                      title="なぜこれをやるのか？"
+                      title="なぜこのクエストをやるのか？"
                     >
                       <HelpCircle className="w-4 h-4" />
                     </button>
