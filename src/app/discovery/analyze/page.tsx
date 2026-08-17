@@ -43,21 +43,18 @@ export default function AnalyzeDiscoveryPage() {
       .map((e, i) => `【記録 ${i + 1} (${typeNames[e.type] || e.type})】\n${e.content}`)
       .join("\n\n");
 
-    const template = `あなたは、人生設計、行動変容、目標設計を支援するプロフェッショナルな分析者です。
+    const template = `あなたは、人生設計、自己探索、目標設計を支援するプロフェッショナルな分析者です。
 
-以下は私自身が書いた自己探索（日記や日頃の違和感、憧れなど）の記録です。
-この文章から、私の人生を決めつけるのではなく、「この人にはこういう傾向や大切にしたい価値観があるのではないか」という仮説として、すべて【日本語】で分析してください。
+以下はユーザー自身が書いた自己探索（日々の違和感、理想の憧れ、日記など）の記録です。
+この記録を分析し、ユーザーの潜在的な「行動パターン」「大切にしたい価値観」「現状と理想のギャップ」「物語の方向性」を、すべて【100%自然な日本語】で抽出・整理してください。
 
-【重要な出力指示】
-1. タイトル、説明文、価値観名など、すべての項目を必ず【自然で分かりやすい日本語】で出力してください。（英語のタイトルは一切使わないでください）
-   例:
-   - 良い例: "改善による成長", "自己効力感と自律", "能力を通じた貢献", "家族と個人の調和"
-   - 避ける例: "Growth through improvement", "Desire for effective self-control"
-2. 価値観を断定せず、「○○を大切にしている可能性があります」という丁寧な仮説として提示してください。
-3. 価値観そのものを安易に目標に変換しないでください。必ず「現状 (Current State)」→「理想 (Desired State)」→「未来の情景 (Future Scene)」→「物語の候補 (Story Candidate)」の順序で逆算して組み立ててください。
+【出力言語とルールの厳格な指示】
+1. タイトル、見出し、説明文、価値観名、現状、理想、物語タイトルなど、JSONの値に含まれるすべての文字列は【必ず自然で分かりやすい日本語】で記述してください。英語のタイトルや単語（例: Growth through improvement 等）は一切含めないでください。
+2. 価値観は決めつけず、「〜を大切にしている可能性があります」という丁寧な仮説として提示してください。
+3. 必ず「現状の課題」→「目指す理想状態」→「未来の情景」→「物語の候補」の順序で逆算して組み立ててください。
 
-まず人間が読みやすい分析・考察の文章を出力してください。
-その後、アプリが取り込めるよう、必ず末尾に以下の形式でJSONを出力してください。
+まず人間が読みやすい分析・考察の解説を出力してください。
+その後、アプリが自動取り込みできるよう、必ず末尾に以下の形式でJSONを出力してください。
 JSONの前後に必ず ---CRESTWARD_JSON_START--- と ---CRESTWARD_JSON_END--- を記載してください。
 
 \`\`\`json
@@ -65,18 +62,18 @@ JSONの前後に必ず ---CRESTWARD_JSON_START--- と ---CRESTWARD_JSON_END--- �
 {
   "patterns": [
     {
-      "title": "改善による自己成長",
+      "title": "改善を通じた自己成長",
       "description": "日常の不便や非効率を自分の工夫で少しずつ改善していくことに、深い充実感を感じている可能性があります。",
       "confidence": "high"
     },
     {
-      "title": "自律と自己コントロールへの欲求",
+      "title": "自律と自己決定の欲求",
       "description": "周囲に流されず、自分の時間やペースを自分でコントロールしたいという強い意志が見られます。",
       "confidence": "high"
     },
     {
-      "title": "能力を通じた価値提供と貢献",
-      "description": "自身の専門性やスキルを高め、誰かの役に立ったり価値を届けることにやりがいを感じています。",
+      "title": "専門能力を通じた貢献と価値提供",
+      "description": "自身のスキルや知見を高め、誰かの役に立ったり価値を届けることにやりがいを感じています。",
       "confidence": "medium"
     }
   ],
@@ -84,22 +81,22 @@ JSONの前後に必ず ---CRESTWARD_JSON_START--- と ---CRESTWARD_JSON_END--- �
     {
       "name": "創造性と最適化",
       "description": "仕組みやプロセスを自ら工夫してより良くすることに価値を感じています。",
-      "evidence": ["..."]
+      "evidence": ["日常の工夫に関する記録より"]
     },
     {
-      "name": "自律と自由",
+      "name": "自律と自由な余白",
       "description": "時間や場所にとらわれず、自己決定できる余白を重視しています。",
-      "evidence": ["..."]
+      "evidence": ["時間の使い方に関する記録より"]
     },
     {
       "name": "家族との豊かな時間",
       "description": "大切な人たちと安心できる良好な関係を保ち続けることを大切にしています。",
-      "evidence": ["..."]
+      "evidence": ["人間関係に関する記録より"]
     }
   ],
   "tensions": [
     {
-      "title": "目の前の業務と長期的な創作のバランス",
+      "title": "目の前の日常業務と長期的な創作のバランス",
       "currentState": "日常の作業に追われ、本当に注力したいコアプロジェクトへの時間が削られがち。",
       "desiredState": "毎朝最優先で自分のプロジェクトに時間を確保し、心に余裕を持てている状態。"
     }
@@ -114,7 +111,7 @@ JSONの前後に必ず ---CRESTWARD_JSON_START--- と ---CRESTWARD_JSON_END--- �
     {
       "title": "自律型プロダクトの開発と自由なライフスタイルの確立",
       "description": "自分の強みを活かしたWebプロダクトをリリースし、収益と自由な時間の両立を達成する。",
-      "relatedValues": ["創造性と最適化", "自律と自由"],
+      "relatedValues": ["創造性と最適化", "自律と自由な余白"],
       "realWorldUnlocks": ["自分の創作に集中できる環境", "精神的・時間的なゆとり"]
     }
   ],
@@ -131,7 +128,7 @@ JSONの前後に必ず ---CRESTWARD_JSON_START--- と ---CRESTWARD_JSON_END--- �
 
 ---
 【分析対象の記録】
-${evidenceText || "（特に入力された記録がありません。一般的な自己探索の仮説を提示してください）"}
+${evidenceText || "（特に入力された記録がありません。一般的な自己探索の仮説を日本語で提示してください）"}
 `;
 
     setPromptText(template);
@@ -157,7 +154,7 @@ ${evidenceText || "（特に入力された記録がありません。一般的�
           </h1>
         </div>
         <p className="text-xs font-medium text-stone-500 leading-relaxed">
-          入力した記録をもとに、AIに渡す専用プロンプトを作成しました。
+          入力した記録をもとに、AIに渡す専用プロンプト（完全日本語指示付き）を作成しました。
         </p>
       </header>
 
@@ -174,7 +171,7 @@ ${evidenceText || "（特に入力された記録がありません。一般的�
       {/* Step 1: Copy */}
       <div className="mb-5">
         <h3 className="text-[11px] font-black text-stone-400 uppercase tracking-widest mb-2 px-1">
-          Step 1: プロンプトをコピー
+          ステップ 1: プロンプトをコピー
         </h3>
         <Button 
           onClick={handleCopy}
@@ -195,7 +192,7 @@ ${evidenceText || "（特に入力された記録がありません。一般的�
       {/* Step 2: Open AI */}
       <div className="mb-5">
         <h3 className="text-[11px] font-black text-stone-400 uppercase tracking-widest mb-2 px-1">
-          Step 2: お使いのAIを開いて貼り付け
+          ステップ 2: お使いのAIを開いて貼り付け
         </h3>
         <div className="grid grid-cols-2 gap-2">
           <a 
@@ -220,7 +217,7 @@ ${evidenceText || "（特に入力された記録がありません。一般的�
       {/* Step 3: Preview */}
       <div className="mb-5">
         <h3 className="text-[11px] font-black text-stone-400 uppercase tracking-widest mb-2 px-1">
-          Step 3: 生成プロンプトの確認
+          ステップ 3: 生成プロンプトの確認
         </h3>
         <div className="bg-stone-100/80 border border-stone-200 rounded-2xl p-3.5 h-40 overflow-y-auto text-[11px] font-mono text-stone-600 whitespace-pre-wrap leading-relaxed shadow-inner">
           {promptText}
@@ -233,7 +230,7 @@ ${evidenceText || "（特に入力された記録がありません。一般的�
           onClick={() => router.push("/discovery/import")}
           className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl py-6 text-sm font-bold shadow-lg shadow-emerald-600/20"
         >
-          AIの回答をインポートする画面へ <ArrowRight className="w-4 h-4 ml-1.5" />
+          AIの回答を取り込む画面へ <ArrowRight className="w-4 h-4 ml-1.5" />
         </Button>
       </div>
 
