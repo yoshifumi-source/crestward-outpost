@@ -5,10 +5,10 @@ import { useRouter } from "next/navigation";
 import { storage } from "@/services/storage";
 import { MainStory, FutureVision, Experiment } from "@/types";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Check, Target, Pencil, Compass, FlaskConical, ArrowRight } from "lucide-react";
+import { Check, Target, Pencil, Compass, FlaskConical } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { translateAnalysisJson, translateText } from "@/lib/translator";
 
 export default function StoryCandidatePage() {
   const router = useRouter();
@@ -23,8 +23,9 @@ export default function StoryCandidatePage() {
     if (raw) {
       try {
         const parsed = JSON.parse(raw);
-        setData(parsed);
-        if (parsed.storyCandidates && parsed.storyCandidates.length > 0) {
+        const localized = translateAnalysisJson(parsed);
+        setData(localized);
+        if (localized.storyCandidates && localized.storyCandidates.length > 0) {
           setSelectedIndex(0);
         } else {
           setSelectedIndex(null);
@@ -40,8 +41,8 @@ export default function StoryCandidatePage() {
     let description = "";
 
     if (selectedIndex !== null && data?.storyCandidates && data.storyCandidates[selectedIndex]) {
-      title = data.storyCandidates[selectedIndex].title;
-      description = data.storyCandidates[selectedIndex].description;
+      title = translateText(data.storyCandidates[selectedIndex].title);
+      description = translateText(data.storyCandidates[selectedIndex].description);
     } else {
       title = manualTitle;
       description = manualDescription;
@@ -76,7 +77,7 @@ export default function StoryCandidatePage() {
       const scene = data.futureScenes[0];
       const vision: FutureVision = {
         id: `vis_${Date.now()}`,
-        content: scene.description || scene.title,
+        content: translateText(scene.description || scene.title),
         createdAt: Date.now(),
         updatedAt: Date.now()
       };
@@ -104,8 +105,8 @@ export default function StoryCandidatePage() {
     let description = "";
 
     if (selectedIndex !== null && data?.storyCandidates && data.storyCandidates[selectedIndex]) {
-      title = data.storyCandidates[selectedIndex].title;
-      description = data.storyCandidates[selectedIndex].description;
+      title = translateText(data.storyCandidates[selectedIndex].title);
+      description = translateText(data.storyCandidates[selectedIndex].description);
     } else {
       title = manualTitle;
       description = manualDescription;
@@ -169,6 +170,10 @@ export default function StoryCandidatePage() {
           <div className="space-y-3">
             {data.storyCandidates.map((c: any, i: number) => {
               const isSelected = selectedIndex === i;
+              const title = translateText(c.title);
+              const desc = translateText(c.description);
+              const unlocks = Array.isArray(c.realWorldUnlocks) ? c.realWorldUnlocks.map(translateText) : [];
+
               return (
                 <div 
                   key={`cand_${i}`} 
@@ -181,7 +186,7 @@ export default function StoryCandidatePage() {
                 >
                   <div className="flex justify-between items-start mb-1.5">
                     <h3 className="text-sm font-black text-stone-800 leading-snug pr-2">
-                      {c.title}
+                      {title}
                     </h3>
                     {isSelected && (
                       <div className="text-emerald-600 bg-emerald-100 p-1 rounded-full shrink-0">
@@ -190,16 +195,16 @@ export default function StoryCandidatePage() {
                     )}
                   </div>
                   <p className="text-xs font-medium text-stone-600 mb-3 leading-relaxed">
-                    {c.description}
+                    {desc}
                   </p>
                   
-                  {c.realWorldUnlocks && c.realWorldUnlocks.length > 0 && (
+                  {unlocks.length > 0 && (
                     <div className="bg-white/80 p-3 rounded-xl border border-emerald-100">
                       <span className="block text-[10px] font-black text-emerald-700 mb-1 uppercase">
                         ✨ この冒険で実現すること
                       </span>
                       <ul className="text-[11px] text-stone-600 space-y-1 list-disc pl-4 font-medium">
-                        {c.realWorldUnlocks.map((u: string, j: number) => (
+                        {unlocks.map((u: string, j: number) => (
                           <li key={j}>{u}</li>
                         ))}
                       </ul>

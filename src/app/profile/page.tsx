@@ -182,12 +182,12 @@ export default function CompassPage() {
               <div key={t.id} className="glass-panel p-4 rounded-2xl border border-stone-200 shadow-2xs">
                 <h4 className="text-xs font-black text-stone-800 mb-2">{t.title}</h4>
                 <div className="space-y-2 text-[11px]">
-                  <div className="p-2.5 rounded-xl bg-stone-50 border border-stone-100 text-stone-600">
-                    <span className="text-[9px] font-black text-stone-400 block uppercase mb-0.5">現在 (Current State)</span>
+                  <div className="p-2.5 rounded-xl bg-stone-50 border border-stone-200/80 text-xs text-stone-700">
+                    <span className="text-[9px] font-black text-stone-400 block uppercase mb-0.5">現在（現状の課題）</span>
                     {t.currentState}
                   </div>
-                  <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-900">
-                    <span className="text-[9px] font-black text-emerald-600 block uppercase mb-0.5">理想 (Desired State)</span>
+                  <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200/80 text-xs text-emerald-900 font-medium">
+                    <span className="text-[9px] font-black text-emerald-600 block uppercase mb-0.5">理想（目指す状態）</span>
                     {t.desiredState}
                   </div>
                 </div>

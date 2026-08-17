@@ -5,25 +5,8 @@ import { useRouter } from "next/navigation";
 import { storage } from "@/services/storage";
 import { Pattern, Tension, Value } from "@/types";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Check, X, ArrowRight, ShieldQuestion, Heart, Sparkles, Target, Flame } from "lucide-react";
-
-// Fallback translations for legacy English inputs
-const TRANSLATION_MAP: Record<string, string> = {
-  "Growth through improvement": "改善による自己成長",
-  "Desire for effective self-control": "自律と自己決定の欲求",
-  "Contribution through competence": "能力を通じた貢献と価値提供",
-  "Growth & Optimization": "創造性とプロセスの最適化",
-  "Autonomy & Freedom": "自律と自由な余白",
-  "Family & Connection": "家族との豊かな時間",
-  "Family and personal time": "家族の時間と個人の時間の調和",
-  "Balanced personal time": "自分を回復・成長させる一人時間"
-};
-
-const translateText = (text?: string): string => {
-  if (!text) return "";
-  return TRANSLATION_MAP[text] || text;
-};
+import { Check, X, ArrowRight, Heart, Sparkles, Target } from "lucide-react";
+import { translateAnalysisJson, translateText } from "@/lib/translator";
 
 export default function ReviewDiscoveryPage() {
   const router = useRouter();
@@ -39,12 +22,14 @@ export default function ReviewDiscoveryPage() {
     if (raw) {
       try {
         const parsed = JSON.parse(raw);
-        setData(parsed);
+        // 全項目を徹底的に日本語化
+        const localized = translateAnalysisJson(parsed);
+        setData(localized);
         
         // デフォルトで全て選択状態にする
-        if (parsed.patterns) setAcceptedPatterns(new Set(parsed.patterns.map((_: any, i: number) => i)));
-        if (parsed.values) setAcceptedValues(new Set(parsed.values.map((_: any, i: number) => i)));
-        if (parsed.tensions) setAcceptedTensions(new Set(parsed.tensions.map((_: any, i: number) => i)));
+        if (localized.patterns) setAcceptedPatterns(new Set(localized.patterns.map((_: any, i: number) => i)));
+        if (localized.values) setAcceptedValues(new Set(localized.values.map((_: any, i: number) => i)));
+        if (localized.tensions) setAcceptedTensions(new Set(localized.tensions.map((_: any, i: number) => i)));
       } catch (e) {
         console.error(e);
       }
@@ -66,7 +51,7 @@ export default function ReviewDiscoveryPage() {
         id: `pat_${Date.now()}_${Math.random()}`,
         title: translateText(p.title),
         description: translateText(p.description),
-        confidence: p.confidence,
+        confidence: p.confidence || "high",
         source: "ai-import",
         userResponse: "accepted"
       }));
@@ -76,7 +61,7 @@ export default function ReviewDiscoveryPage() {
       .map((v: any) => ({
         id: `val_${Date.now()}_${Math.random()}`,
         name: translateText(v.name),
-        level: 4, // 初期レベル高めに設定
+        level: 4, // 初期星レベル
         createdAt: Date.now(),
         updatedAt: Date.now()
       }));
@@ -251,11 +236,11 @@ export default function ReviewDiscoveryPage() {
                       </h3>
                       <div className="space-y-2 text-[11px]">
                         <div className={`p-2.5 rounded-xl border ${isSelected ? 'bg-stone-50 border-stone-200/80 text-stone-700' : 'bg-stone-100/50 border-stone-100 text-stone-400'}`}>
-                          <span className="block text-[9px] font-black text-stone-400 mb-0.5 uppercase">現在 (Current State)</span>
+                          <span className="block text-[9px] font-black text-stone-400 mb-0.5 uppercase">現在（現状の課題）</span>
                           {cur}
                         </div>
                         <div className={`p-2.5 rounded-xl border ${isSelected ? 'bg-emerald-50 border-emerald-200/80 text-emerald-900' : 'bg-stone-100/50 border-stone-100 text-stone-400'}`}>
-                          <span className="block text-[9px] font-black text-emerald-600 mb-0.5 uppercase">理想 (Desired State)</span>
+                          <span className="block text-[9px] font-black text-emerald-600 mb-0.5 uppercase">理想（目指す状態）</span>
                           {des}
                         </div>
                       </div>
