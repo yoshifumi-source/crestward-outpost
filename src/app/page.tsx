@@ -8,6 +8,7 @@ import { AdventurerStatusCard } from "@/components/AdventurerStatusCard";
 import { DailyCheckInModal } from "@/components/DailyCheckInModal";
 import { QuestCompletionModal } from "@/components/QuestCompletionModal";
 import { WhyExplanationModal } from "@/components/WhyExplanationModal";
+import { MetricProgressModal } from "@/components/MetricProgressModal";
 import { Button } from "@/components/ui/button";
 import { 
   Sparkles, 
@@ -19,7 +20,8 @@ import {
   FlaskConical, 
   ArrowRight,
   RefreshCw,
-  Zap
+  Zap,
+  TrendingUp
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
@@ -40,6 +42,7 @@ export default function HomePage() {
   const [completedQuest, setCompletedQuest] = useState<Quest | null>(null);
   const [levelUpData, setLevelUpData] = useState<{ leveledUp: boolean; newLevel: number }>({ leveledUp: false, newLevel: 1 });
   const [whyQuest, setWhyQuest] = useState<Quest | null>(null);
+  const [progressQuest, setProgressQuest] = useState<Quest | null>(null);
 
   const loadData = () => {
     const st = storage.getSettings();
@@ -105,6 +108,17 @@ export default function HomePage() {
     setLevelUpData({ leveledUp: xpResult.leveledUp, newLevel: xpResult.newLevel });
     setCompletedQuest(quest);
     loadData();
+  };
+
+  const handleProgressUpdated = (updatedQuest: Quest, isCompleted: boolean) => {
+    loadData();
+    if (isCompleted) {
+      setTimeout(() => {
+        if (confirm(`🎉 目標数値を達成しました！「${updatedQuest.title}」を完了にして報酬（XP・Gold）を受け取りますか？`)) {
+          handleQuestComplete(updatedQuest);
+        }
+      }, 300);
+    }
   };
 
   const handleLoadSample = () => {
@@ -276,6 +290,9 @@ export default function HomePage() {
                 ? { label: "上級", color: "bg-rose-50 text-rose-700 border-rose-200" }
                 : { label: "中級", color: "bg-amber-50 text-amber-700 border-amber-200" };
 
+              const metric = quest.metric;
+              const percent = metric ? Math.min(100, Math.round((metric.currentValue / metric.targetValue) * 1000) / 10) : 0;
+
               return (
                 <div 
                   key={quest.id} 
@@ -308,9 +325,33 @@ export default function HomePage() {
                   </div>
 
                   {quest.description && (
-                    <p className="text-xs font-medium text-stone-500 mb-3 leading-relaxed">
+                    <p className="text-xs font-medium text-stone-500 mb-2 leading-relaxed">
                       {quest.description}
                     </p>
+                  )}
+
+                  {/* Numeric Metric Progress Bar */}
+                  {metric && (
+                    <div className="p-2.5 rounded-xl bg-stone-50/80 border border-stone-200/70 mb-3">
+                      <div className="flex justify-between items-baseline mb-1 text-[11px] font-bold">
+                        <span className="text-stone-400 text-[10px] font-black">到達度</span>
+                        <div className="font-mono">
+                          <span className="text-emerald-700 font-black">{metric.currentValue.toLocaleString()}</span>
+                          <span className="text-stone-400 mx-0.5">/</span>
+                          <span className="text-stone-600">{metric.targetValue.toLocaleString()} {metric.unit}</span>
+                          <span className="ml-1 text-[10px] text-emerald-600 font-black">({percent}%)</span>
+                        </div>
+                      </div>
+                      <Progress value={percent} className="h-1.5 bg-stone-200/60 *:bg-emerald-600 mb-2" />
+                      
+                      <button
+                        onClick={() => setProgressQuest(quest)}
+                        className="w-full py-1.5 px-2 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/80 text-[11px] font-bold flex items-center justify-center gap-1 transition-colors active:scale-98"
+                      >
+                        <TrendingUp className="w-3 h-3 text-emerald-600" />
+                        ＋ 進捗を記録する
+                      </button>
+                    </div>
                   )}
 
                   {/* Rewards & Complete Action */}
@@ -344,6 +385,13 @@ export default function HomePage() {
         isOpen={isCheckInOpen} 
         onClose={() => setIsCheckInOpen(false)} 
         onCheckInComplete={loadData} 
+      />
+
+      <MetricProgressModal
+        quest={progressQuest}
+        isOpen={!!progressQuest}
+        onClose={() => setProgressQuest(null)}
+        onProgressUpdated={handleProgressUpdated}
       />
 
       <QuestCompletionModal

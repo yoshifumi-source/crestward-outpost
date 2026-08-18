@@ -46,6 +46,21 @@ export type MainStory = {
 export type QuestDifficulty = "easy" | "normal" | "hard" | "very_hard";
 export type QuestStatus = "active" | "completed" | "paused" | "abandoned";
 
+export type MetricProgressLog = {
+  id: string;
+  date: number; // timestamp
+  amountAdded: number;
+  totalAfter: number;
+  note?: string;
+};
+
+export type QuestMetric = {
+  targetValue: number; // 目標値 (例: 1000000, 213, 300)
+  currentValue: number; // 現在値 (例: 250000, 55, 30)
+  unit: string; // 単位 (例: "円", "ページ", "km", "回", "時間")
+  history?: MetricProgressLog[];
+};
+
 export type Quest = {
   id: string;
   title: string;
@@ -60,6 +75,7 @@ export type Quest = {
   xpReward: number;
   goldReward: number;
   skillTags: string[];
+  metric?: QuestMetric;
   dueDate?: number;
   completedAt?: number;
   createdAt: number;
@@ -81,6 +97,7 @@ export type Reward = {
 export type LogType = 
   | "story_started"
   | "quest_completed"
+  | "metric_progress_updated"
   | "story_pivoted"
   | "story_evolved"
   | "value_changed"

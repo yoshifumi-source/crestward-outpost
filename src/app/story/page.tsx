@@ -239,23 +239,33 @@ export default function StoryPage() {
 
                               {/* Quest pills */}
                               <div className="flex flex-wrap gap-1.5 mt-2">
-                                {msQuests.map((q) => (
-                                  <span 
-                                    key={q.id}
-                                    className={`text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 ${
-                                      q.status === "completed" 
-                                        ? "bg-emerald-100 text-emerald-800 line-through opacity-70" 
-                                        : "bg-white text-stone-700 border border-stone-200 shadow-2xs"
-                                    }`}
-                                  >
-                                    {q.status === "completed" ? (
-                                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                                    ) : (
-                                      <Circle className="w-3 h-3 text-stone-400" />
-                                    )}
-                                    {q.title}
-                                  </span>
-                                ))}
+                                {msQuests.map((q) => {
+                                  const metric = q.metric;
+                                  const percent = metric ? Math.min(100, Math.round((metric.currentValue / metric.targetValue) * 100)) : null;
+
+                                  return (
+                                    <span 
+                                      key={q.id}
+                                      className={`text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 ${
+                                        q.status === "completed" 
+                                          ? "bg-emerald-100 text-emerald-800 line-through opacity-70" 
+                                          : "bg-white text-stone-700 border border-stone-200 shadow-2xs"
+                                      }`}
+                                    >
+                                      {q.status === "completed" ? (
+                                        <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
+                                      ) : (
+                                        <Circle className="w-3 h-3 text-stone-400 shrink-0" />
+                                      )}
+                                      <span>{q.title}</span>
+                                      {metric && (
+                                        <span className="font-mono text-[9px] text-emerald-700 font-bold bg-emerald-50 px-1 rounded border border-emerald-200/60 ml-0.5">
+                                          {metric.currentValue}/{metric.targetValue} {metric.unit}
+                                        </span>
+                                      )}
+                                    </span>
+                                  );
+                                })}
                               </div>
                             </div>
                           );

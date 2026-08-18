@@ -109,6 +109,55 @@ export const storage = {
   // Quests
   getQuests: () => get<Quest[]>("quests", []),
   saveQuests: (quests: Quest[]) => set("quests", quests),
+  updateQuestMetric: (
+    questId: string, 
+    value: number, 
+    isAbsolute = false, 
+    note?: string
+  ): { quest: Quest | null; isCompleted: boolean } => {
+    const quests = storage.getQuests();
+    const target = quests.find(q => q.id === questId);
+    if (!target || !target.metric) return { quest: null, isCompleted: false };
+
+    const oldVal = target.metric.currentValue || 0;
+    const newVal = isAbsolute ? Math.max(0, value) : Math.max(0, oldVal + value);
+    const amountAdded = isAbsolute ? (newVal - oldVal) : value;
+
+    const logEntry = {
+      id: `mpl_${Date.now()}`,
+      date: Date.now(),
+      amountAdded,
+      totalAfter: newVal,
+      note: note?.trim() || undefined
+    };
+
+    const history = target.metric.history || [];
+    target.metric.currentValue = newVal;
+    target.metric.history = [logEntry, ...history];
+
+    const isCompleted = newVal >= target.metric.targetValue;
+
+    storage.saveQuests(quests);
+
+    storage.addStoryLog({
+      id: `log_${Date.now()}`,
+      date: Date.now(),
+      type: "metric_progress_updated",
+      title: `進捗記録: ${target.title}`,
+      description: `${amountAdded >= 0 ? `+${amountAdded}` : amountAdded} ${target.metric.unit} （累計: ${newVal}/${target.metric.targetValue} ${target.metric.unit}）${note ? ` - ${note}` : ""}`,
+      questId: target.id,
+      storyId: target.storyId,
+      metadata: {
+        amountAdded,
+        totalAfter: newVal,
+        targetValue: target.metric.targetValue,
+        unit: target.metric.unit,
+        note
+      }
+    });
+
+    return { quest: target, isCompleted };
+  },
 
   // Skills
   getSkills: () => get<Skill[]>("skills", []),
@@ -245,8 +294,8 @@ export const storage = {
       },
       {
         id: "q_2",
-        title: "CrestwardのUIと操作フローを実際にテストする",
-        description: "ホーム、クエスト、コンパス画面を巡回して使い心地を体感する。",
+        title: "開発・設計の専門書（全213ページ）を読み進める",
+        description: "読んだページ数を記録して、知識のインプットを習慣化する。",
         storyId: "story_1",
         chapterId: "ch_1",
         milestoneId: "ms_1",
@@ -255,22 +304,40 @@ export const storage = {
         mpCost: 2,
         xpReward: 80,
         goldReward: 40,
-        skillTags: ["プロダクト開発", "UI/UX"],
+        skillTags: ["自己研鑽", "学習"],
+        metric: {
+          targetValue: 213,
+          currentValue: 55,
+          unit: "ページ",
+          history: [
+            { id: "mpl_1", date: now - 86400000 * 2, amountAdded: 30, totalAfter: 30, note: "第1章読了" },
+            { id: "mpl_2", date: now - 86400000, amountAdded: 25, totalAfter: 55, note: "第2章読了" }
+          ]
+        },
         createdAt: now
       },
       {
         id: "q_3",
-        title: "30分間の集中プログラミングで機能の仕上げを行う",
-        description: "タイマーをセットして、最優先タスクに深く没頭する。",
+        title: "副業アプリの収益（目標100万円）を積み上げる",
+        description: "得られた売上・副業収入を記録して達成度を可視化する。",
         storyId: "story_1",
         chapterId: "ch_1",
-        milestoneId: "ms_1",
+        milestoneId: "ms_2",
         status: "active",
         difficulty: "hard",
         mpCost: 3,
-        xpReward: 150,
-        goldReward: 70,
-        skillTags: ["エンジニアリング", "集中力"],
+        xpReward: 200,
+        goldReward: 100,
+        skillTags: ["副業・収益化", "エンジニアリング"],
+        metric: {
+          targetValue: 1000000,
+          currentValue: 150000,
+          unit: "円",
+          history: [
+            { id: "mpl_3", date: now - 86400000 * 5, amountAdded: 50000, totalAfter: 50000, note: "初月サブスク収益" },
+            { id: "mpl_4", date: now - 86400000 * 2, amountAdded: 100000, totalAfter: 150000, note: "2ヶ月目収益" }
+          ]
+        },
         createdAt: now
       }
     ];

@@ -81,6 +81,17 @@ export default function QuestImportPage() {
 
           msData.quests?.forEach((qData: any) => {
             const questId = `q_${Date.now()}_${Math.random()}`;
+            
+            let metricObj = undefined;
+            if (qData.metric && typeof qData.metric.targetValue === "number") {
+              metricObj = {
+                targetValue: qData.metric.targetValue,
+                currentValue: qData.metric.currentValue || 0,
+                unit: translateText(qData.metric.unit) || "回",
+                history: []
+              };
+            }
+
             newQuests.push({
               id: questId,
               title: translateText(qData.title),
@@ -94,6 +105,7 @@ export default function QuestImportPage() {
               xpReward: qData.difficulty === "easy" ? 50 : qData.difficulty === "hard" ? 150 : 100,
               goldReward: qData.difficulty === "easy" ? 20 : qData.difficulty === "hard" ? 80 : 50,
               skillTags: [],
+              metric: metricObj,
               createdAt: Date.now()
             });
           });
