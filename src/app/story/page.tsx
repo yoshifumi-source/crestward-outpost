@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { storage } from "@/services/storage";
-import { MainStory, Quest, QuestChapter, Milestone, FutureVision } from "@/types";
+import { MainStory, Quest, QuestChapter, Milestone, FutureVision, QuestDifficulty } from "@/types";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,9 @@ import {
   Compass, 
   Flag,
   Target,
-  Edit3
+  Edit3,
+  Trash2,
+  BookOpen
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
@@ -34,25 +36,41 @@ export default function StoryPage() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [allStories, setAllStories] = useState<MainStory[]>([]);
   const [mainStory, setMainStory] = useState<MainStory | null>(null);
-  const [pastStories, setPastStories] = useState<MainStory[]>([]);
   const [futureVision, setFutureVision] = useState<FutureVision | null>(null);
   const [chapters, setChapters] = useState<QuestChapter[]>([]);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [quests, setQuests] = useState<Quest[]>([]);
   
+  // Pivot Dialog
   const [isPivotDialogOpen, setIsPivotDialogOpen] = useState(false);
   const [pivotReason, setPivotReason] = useState("");
 
+  // Create Story Dialog
   const [isCreateStoryOpen, setIsCreateStoryOpen] = useState(false);
   const [newStoryTitle, setNewStoryTitle] = useState("");
   const [newStoryDesc, setNewStoryDesc] = useState("");
+
+  // Add Chapter Dialog
+  const [isAddChapterOpen, setIsAddChapterOpen] = useState(false);
+  const [newChapterTitle, setNewChapterTitle] = useState("");
+
+  // Add Milestone Dialog
+  const [isAddMilestoneOpen, setIsAddMilestoneOpen] = useState(false);
+  const [targetChapterId, setTargetChapterId] = useState<string>("");
+  const [newMilestoneTitle, setNewMilestoneTitle] = useState("");
+
+  // Add Quest to Milestone Dialog
+  const [isAddQuestOpen, setIsAddQuestOpen] = useState(false);
+  const [targetMilestoneId, setTargetMilestoneId] = useState<string>("");
+  const [targetChapterIdForQuest, setTargetChapterIdForQuest] = useState<string>("");
+  const [newQuestTitle, setNewQuestTitle] = useState("");
+  const [newQuestDiff, setNewQuestDiff] = useState<QuestDifficulty>("easy");
 
   const loadData = () => {
     const stories = storage.getStories();
     setAllStories(stories);
     const active = stories.find(s => s.status === "active") || null;
     setMainStory(active);
-    setPastStories(stories.filter(s => s.status !== "active"));
     setFutureVision(storage.getFutureVision());
 
     if (active) {
@@ -113,6 +131,99 @@ export default function StoryPage() {
       status: s.id === storyId ? ("active" as const) : s.status === "active" ? ("dormant" as const) : s.status
     }));
     storage.saveStories(updated);
+    loadData();
+  };
+
+  const handleAddChapter = () => {
+    if (!mainStory || !newChapterTitle.trim()) return;
+
+    const currentChs = storage.getChapters();
+    const storyChs = currentChs.filter(c => c.storyId === mainStory.id);
+    const newCh: QuestChapter = {
+      id: `ch_${Date.now()}`,
+      storyId: mainStory.id,
+      title: newChapterTitle.trim(),
+      order: storyChs.length,
+      status: "active"
+    };
+
+    storage.saveChapters([...currentChs, newCh]);
+    setIsAddChapterOpen(false);
+    setNewChapterTitle("");
+    loadData();
+  };
+
+  const handleDeleteChapter = (chId: string) => {
+    if (confirm("この章を削除しますか？紐付くマイルストーンやクエストも削除されます。")) {
+      const allChs = storage.getChapters().filter(c => c.id !== chId);
+      const allMs = storage.getMilestones().filter(m => m.chapterId !== chId);
+      const allQs = storage.getQuests().filter(q => q.chapterId !== chId);
+
+      storage.saveChapters(allChs);
+      storage.saveMilestones(allMs);
+      storage.saveQuests(allQs);
+      loadData();
+    }
+  };
+
+  const handleAddMilestone = () => {
+    if (!targetChapterId || !newMilestoneTitle.trim()) return;
+
+    const currentMs = storage.getMilestones();
+    const chMs = currentMs.filter(m => m.chapterId === targetChapterId);
+    const newMs: Milestone = {
+      id: `ms_${Date.now()}`,
+      chapterId: targetChapterId,
+      title: newMilestoneTitle.trim(),
+      order: chMs.length,
+      status: "active"
+    };
+
+    storage.saveMilestones([...currentMs, newMs]);
+    setIsAddMilestoneOpen(false);
+    setNewMilestoneTitle("");
+    loadData();
+  };
+
+  const handleDeleteMilestone = (msId: string) => {
+    if (confirm("このマイルストーンを削除しますか？紐付くクエストも削除されます。")) {
+      const allMs = storage.getMilestones().filter(m => m.id !== msId);
+      const allQs = storage.getQuests().filter(q => q.milestoneId !== msId);
+
+      storage.saveMilestones(allMs);
+      storage.saveQuests(allQs);
+      loadData();
+    }
+  };
+
+  const handleAddQuestToMilestone = () => {
+    if (!mainStory || !targetMilestoneId || !newQuestTitle.trim()) return;
+
+    const mpCost = newQuestDiff === "easy" ? 1 : newQuestDiff === "hard" ? 3 : 2;
+    const xpReward = newQuestDiff === "easy" ? 50 : newQuestDiff === "hard" ? 150 : 100;
+    const goldReward = newQuestDiff === "easy" ? 20 : newQuestDiff === "hard" ? 80 : 50;
+
+    const newQuest: Quest = {
+      id: `q_${Date.now()}`,
+      title: newQuestTitle.trim(),
+      description: "",
+      storyId: mainStory.id,
+      chapterId: targetChapterIdForQuest,
+      milestoneId: targetMilestoneId,
+      status: "active",
+      difficulty: newQuestDiff,
+      mpCost,
+      xpReward,
+      goldReward,
+      skillTags: [],
+      createdAt: Date.now()
+    };
+
+    const currentQuests = storage.getQuests();
+    storage.saveQuests([...currentQuests, newQuest]);
+
+    setIsAddQuestOpen(false);
+    setNewQuestTitle("");
     loadData();
   };
 
@@ -243,7 +354,7 @@ export default function StoryPage() {
             </button>
             <button 
               onClick={() => setIsCreateStoryOpen(true)}
-              className="flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-1 rounded-full hover:bg-emerald-100 transition-colors shadow-2xs"
+              className="flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2.5 py-1 rounded-full hover:bg-emerald-100 transition-colors shadow-2xs"
             >
               <Plus className="w-3 h-3" /> 目標追加
             </button>
@@ -317,25 +428,45 @@ export default function StoryPage() {
             <Flag className="w-3.5 h-3.5 text-indigo-600" />
             チャプター & マイルストーン
           </h3>
-          <button 
-            onClick={() => router.push("/quest-builder")}
-            className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200/60"
-          >
-            <Plus className="w-3 h-3" /> クエスト追加
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setIsAddChapterOpen(true)}
+              className="text-[11px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 px-2.5 py-1 rounded-full flex items-center gap-1 transition-colors shadow-2xs"
+            >
+              <Plus className="w-3 h-3" /> 章を追加
+            </button>
+            <button 
+              onClick={() => router.push("/quest-builder")}
+              className="text-[11px] font-bold text-stone-600 hover:text-stone-900 flex items-center gap-1 bg-white px-2.5 py-1 rounded-full border border-stone-200 shadow-2xs"
+            >
+              工房で分解
+            </button>
+          </div>
         </div>
 
         {chapters.length === 0 ? (
-          <div className="p-6 rounded-3xl bg-white border border-stone-200 text-center">
-            <p className="text-xs font-bold text-stone-600 mb-3">
-              まだチャプター構造がありません。クエスト作成工房でクエストラインを生成しましょう。
+          <div className="p-6 rounded-3xl bg-white border border-stone-200 text-center shadow-sm">
+            <p className="text-xs font-bold text-stone-700 mb-2">
+              まだ第1章〜第3章の構造が設定されていません。
             </p>
-            <Button 
-              onClick={() => router.push("/quest-builder")}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold py-2.5"
-            >
-              クエスト作成工房を開く
-            </Button>
+            <p className="text-xs text-stone-500 mb-4 leading-relaxed">
+              「工房で分解」からAIに自動設計してもらうか、「＋章を追加」から手動で第1章を作成できます。
+            </p>
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => router.push("/quest-builder")}
+                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl py-5 font-bold text-xs shadow-md"
+              >
+                クエスト作成工房で分解
+              </Button>
+              <Button 
+                onClick={() => setIsAddChapterOpen(true)}
+                variant="outline"
+                className="flex-1 border-stone-300 text-stone-700 rounded-2xl py-5 font-bold text-xs"
+              >
+                手動で第1章を追加
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="space-y-4 relative before:absolute before:inset-0 before:left-4 before:w-0.5 before:bg-gradient-to-b before:from-emerald-400 before:via-teal-300 before:to-stone-200">
@@ -352,16 +483,37 @@ export default function StoryPage() {
                   {/* Chapter Card */}
                   <div className="glass-panel p-4 rounded-2xl border border-stone-200/90 shadow-sm mb-3">
                     <div className="flex justify-between items-center mb-2">
-                      <h4 className="font-black text-xs text-emerald-900">
-                        {chapter.title}
-                      </h4>
-                      <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                        第 {chIdx + 1} 章
-                      </span>
+                      <div>
+                        <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 mb-1 inline-block">
+                          第 {chIdx + 1} 章
+                        </span>
+                        <h4 className="font-black text-xs text-emerald-950">
+                          {chapter.title}
+                        </h4>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => {
+                            setTargetChapterId(chapter.id);
+                            setIsAddMilestoneOpen(true);
+                          }}
+                          className="text-[10px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/60 px-2 py-0.5 rounded-md flex items-center gap-0.5"
+                          title="マイルストーンを追加"
+                        >
+                          <Plus className="w-3 h-3" /> 中間目標
+                        </button>
+                        <button
+                          onClick={() => handleDeleteChapter(chapter.id)}
+                          className="p-1 text-stone-400 hover:text-rose-600 rounded-md hover:bg-stone-100 transition-colors"
+                          title="この章を削除"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
 
                     {/* Milestones inside Chapter */}
-                    {chapterMilestones.length > 0 && (
+                    {chapterMilestones.length > 0 ? (
                       <div className="space-y-2 mt-3 pt-2 border-t border-stone-100">
                         {chapterMilestones.map((ms) => {
                           const msQuests = quests.filter(q => q.milestoneId === ms.id);
@@ -370,10 +522,30 @@ export default function StoryPage() {
                           return (
                             <div key={ms.id} className="bg-stone-50 p-2.5 rounded-xl border border-stone-200/60">
                               <div className="flex justify-between items-center text-[11px] font-bold text-stone-800 mb-1">
-                                <span>{ms.title}</span>
-                                <span className="font-mono text-[10px] text-stone-500">
-                                  {completedCount} / {msQuests.length} 完了
-                                </span>
+                                <div className="flex items-center gap-1.5">
+                                  <span>{ms.title}</span>
+                                  <span className="font-mono text-[10px] text-stone-500">
+                                    ({completedCount} / {msQuests.length} 完了)
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={() => {
+                                      setTargetChapterIdForQuest(chapter.id);
+                                      setTargetMilestoneId(ms.id);
+                                      setIsAddQuestOpen(true);
+                                    }}
+                                    className="text-[9px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-200/60 flex items-center gap-0.5"
+                                  >
+                                    <Plus className="w-2.5 h-2.5" /> クエスト
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteMilestone(ms.id)}
+                                    className="p-0.5 text-stone-400 hover:text-rose-600 rounded"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </button>
+                                </div>
                               </div>
 
                               {/* Quest pills */}
@@ -407,6 +579,10 @@ export default function StoryPage() {
                             </div>
                           );
                         })}
+                      </div>
+                    ) : (
+                      <div className="text-center py-2 text-[11px] text-stone-400">
+                        マイルストーンがありません。「＋中間目標」から追加してください。
                       </div>
                     )}
                   </div>
@@ -499,6 +675,155 @@ export default function StoryPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Modal to Add Chapter */}
+      <Dialog open={isAddChapterOpen} onOpenChange={setIsAddChapterOpen}>
+        <DialogContent className="max-w-xs mx-auto rounded-3xl p-6 bg-white/95 backdrop-blur-xl border border-stone-100 shadow-2xl">
+          <DialogHeader className="text-center">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-200 mx-auto flex items-center justify-center mb-2 shadow-sm">
+              <Flag className="w-6 h-6" />
+            </div>
+            <DialogTitle className="text-lg font-black text-stone-800">
+              新しい章（チャプター）を追加
+            </DialogTitle>
+            <DialogDescription className="text-xs font-medium text-stone-500">
+              目標を達成するためのフェーズ（例: 第1章: 準備、第2章: 実践、第3章: 習慣化）を設定します。
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-2 text-left">
+            <label className="block text-xs font-bold text-stone-700 mb-1">章のタイトル</label>
+            <Input
+              value={newChapterTitle}
+              onChange={(e) => setNewChapterTitle(e.target.value)}
+              placeholder="例: 第1章: 現状把握と最初の一歩"
+              className="text-xs rounded-xl font-bold"
+            />
+          </div>
+
+          <DialogFooter className="flex flex-col gap-2 mt-2">
+            <Button
+              onClick={handleAddChapter}
+              disabled={!newChapterTitle.trim()}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl py-5 font-bold text-xs shadow-md"
+            >
+              章を追加する
+            </Button>
+            <Button
+              onClick={() => setIsAddChapterOpen(false)}
+              variant="ghost"
+              className="w-full text-stone-400 text-xs font-bold"
+            >
+              キャンセル
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal to Add Milestone */}
+      <Dialog open={isAddMilestoneOpen} onOpenChange={setIsAddMilestoneOpen}>
+        <DialogContent className="max-w-xs mx-auto rounded-3xl p-6 bg-white/95 backdrop-blur-xl border border-stone-100 shadow-2xl">
+          <DialogHeader className="text-center">
+            <DialogTitle className="text-base font-black text-stone-800">
+              マイルストーン（中間目標）を追加
+            </DialogTitle>
+            <DialogDescription className="text-xs font-medium text-stone-500">
+              この章でクリアしたい具体的なチェックポイントを設定します。
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-2 text-left">
+            <label className="block text-xs font-bold text-stone-700 mb-1">マイルストーン名</label>
+            <Input
+              value={newMilestoneTitle}
+              onChange={(e) => setNewMilestoneTitle(e.target.value)}
+              placeholder="例: 必要な情報の収集とリスト作成"
+              className="text-xs rounded-xl font-bold"
+            />
+          </div>
+
+          <DialogFooter className="flex flex-col gap-2 mt-2">
+            <Button
+              onClick={handleAddMilestone}
+              disabled={!newMilestoneTitle.trim()}
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl py-5 font-bold text-xs shadow-md"
+            >
+              マイルストーンを追加
+            </Button>
+            <Button
+              onClick={() => setIsAddMilestoneOpen(false)}
+              variant="ghost"
+              className="w-full text-stone-400 text-xs font-bold"
+            >
+              キャンセル
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal to Add Quest to Milestone */}
+      <Dialog open={isAddQuestOpen} onOpenChange={setIsAddQuestOpen}>
+        <DialogContent className="max-w-xs mx-auto rounded-3xl p-6 bg-white/95 backdrop-blur-xl border border-stone-100 shadow-2xl">
+          <DialogHeader className="text-center">
+            <DialogTitle className="text-base font-black text-stone-800">
+              マイルストーンにクエストを追加
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2 text-left">
+            <div>
+              <label className="block text-xs font-bold text-stone-700 mb-1">クエストタイトル</label>
+              <Input
+                value={newQuestTitle}
+                onChange={(e) => setNewQuestTitle(e.target.value)}
+                placeholder="例: 参考サイトを3つメモする"
+                className="text-xs rounded-xl font-bold"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-stone-700 mb-1">難易度</label>
+              <div className="grid grid-cols-3 gap-1.5">
+                {[
+                  { key: "easy", label: "初級 (MP1)" },
+                  { key: "normal", label: "中級 (MP2)" },
+                  { key: "hard", label: "上級 (MP3)" }
+                ].map((d) => (
+                  <button
+                    key={d.key}
+                    type="button"
+                    onClick={() => setNewQuestDiff(d.key as QuestDifficulty)}
+                    className={`py-2 text-[11px] font-bold rounded-xl border transition-all ${
+                      newQuestDiff === d.key 
+                        ? "bg-stone-900 text-white border-stone-900" 
+                        : "bg-stone-50 text-stone-600 border-stone-200"
+                    }`}
+                  >
+                    {d.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="flex flex-col gap-2 mt-2">
+            <Button
+              onClick={handleAddQuestToMilestone}
+              disabled={!newQuestTitle.trim()}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl py-5 font-bold text-xs shadow-md"
+            >
+              クエストを追加
+            </Button>
+            <Button
+              onClick={() => setIsAddQuestOpen(false)}
+              variant="ghost"
+              className="w-full text-stone-400 text-xs font-bold"
+            >
+              キャンセル
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Pivot / Direction Change Dialog */}
       <Dialog open={isPivotDialogOpen} onOpenChange={setIsPivotDialogOpen}>
         <DialogContent className="max-w-xs mx-auto rounded-3xl p-6 bg-white/95 backdrop-blur-xl border border-stone-100 shadow-2xl">
@@ -514,7 +839,7 @@ export default function StoryPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="py-2">
+          <div className="py-2 text-left">
             <label className="block text-xs font-bold text-stone-700 mb-1.5">
               方針転換の理由
             </label>
