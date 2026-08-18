@@ -236,14 +236,20 @@ export default function StoryPage() {
           </div>
           <div className="flex items-center gap-1.5">
             <button 
+              onClick={() => router.push("/guide")}
+              className="flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200/80 px-2 py-1 rounded-full hover:bg-emerald-100 transition-colors shadow-2xs"
+            >
+              📖 ガイド
+            </button>
+            <button 
               onClick={() => setIsCreateStoryOpen(true)}
-              className="flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2.5 py-1 rounded-full hover:bg-emerald-100 transition-colors shadow-2xs"
+              className="flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-1 rounded-full hover:bg-emerald-100 transition-colors shadow-2xs"
             >
               <Plus className="w-3 h-3" /> 目標追加
             </button>
             <button 
               onClick={() => setIsPivotDialogOpen(true)}
-              className="flex items-center gap-1 text-[11px] font-bold text-stone-500 bg-white border border-stone-200 px-2.5 py-1 rounded-full hover:bg-stone-50 transition-colors shadow-sm"
+              className="flex items-center gap-1 text-[11px] font-bold text-stone-500 bg-white border border-stone-200 px-2 py-1 rounded-full hover:bg-stone-50 transition-colors shadow-sm"
             >
               <GitBranch className="w-3.5 h-3.5 text-purple-600" />
               方針転換

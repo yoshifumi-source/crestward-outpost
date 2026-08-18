@@ -306,9 +306,14 @@ JSONの前後に必ず ---CRESTWARD_JSON_START--- と ---CRESTWARD_JSON_END--- �
   return (
     <div className="min-h-screen flex flex-col p-6 max-w-md mx-auto pt-6 pb-24">
       <header className="mb-4">
-        <Link href="/" className="inline-flex items-center text-stone-400 hover:text-stone-700 text-xs font-bold mb-3 transition-colors">
-          <ArrowLeft className="w-4 h-4 mr-1" /> ホームに戻る
-        </Link>
+        <div className="flex items-center justify-between mb-3">
+          <Link href="/" className="inline-flex items-center text-stone-400 hover:text-stone-700 text-xs font-bold transition-colors">
+            <ArrowLeft className="w-4 h-4 mr-1" /> ホームに戻る
+          </Link>
+          <Link href="/guide" className="inline-flex items-center text-emerald-700 hover:text-emerald-800 text-xs font-bold bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200/60 shadow-2xs transition-colors">
+            📖 使い方ガイド
+          </Link>
+        </div>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Hammer className="w-5 h-5 text-emerald-600" />

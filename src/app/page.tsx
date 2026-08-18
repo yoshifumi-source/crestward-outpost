@@ -22,7 +22,8 @@ import {
   RefreshCw,
   Zap,
   TrendingUp,
-  Trash2
+  Trash2,
+  BookOpen
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
@@ -144,6 +145,23 @@ export default function HomePage() {
 
   return (
     <main className="flex flex-col min-h-screen p-4 pb-28 mx-auto max-w-md">
+      {/* Top App Header & Guide Link */}
+      <div className="flex items-center justify-between mb-3 px-1">
+        <div className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="text-[11px] font-black text-stone-600 uppercase tracking-wider font-mono">
+            CRESTWARD OUTPOST
+          </span>
+        </div>
+        <button
+          onClick={() => router.push("/guide")}
+          className="text-[11px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 px-2.5 py-1 rounded-full flex items-center gap-1 shadow-2xs transition-colors"
+        >
+          <BookOpen className="w-3.5 h-3.5 text-emerald-600" />
+          使い方ガイド
+        </button>
+      </div>
+
       {/* Adventurer Status Card */}
       <AdventurerStatusCard 
         settings={settings} 
