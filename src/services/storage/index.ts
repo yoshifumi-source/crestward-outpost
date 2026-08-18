@@ -105,10 +105,23 @@ export const storage = {
   getStories: () => get<MainStory[]>("stories", []),
   saveStories: (stories: MainStory[]) => set("stories", stories),
   getActiveStory: () => get<MainStory[]>("stories", []).find(s => s.status === "active"),
+  deleteStory: (storyId: string) => {
+    const stories = storage.getStories().filter(s => s.id !== storyId);
+    storage.saveStories(stories);
+    // Also remove associated chapters, milestones, and quests
+    const chapters = storage.getChapters().filter(c => c.storyId !== storyId);
+    storage.saveChapters(chapters);
+    const quests = storage.getQuests().filter(q => q.storyId !== storyId);
+    storage.saveQuests(quests);
+  },
 
   // Quests
   getQuests: () => get<Quest[]>("quests", []),
   saveQuests: (quests: Quest[]) => set("quests", quests),
+  deleteQuest: (questId: string) => {
+    const quests = storage.getQuests().filter(q => q.id !== questId);
+    storage.saveQuests(quests);
+  },
   updateQuestMetric: (
     questId: string, 
     value: number, 

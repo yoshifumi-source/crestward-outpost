@@ -21,7 +21,8 @@ import {
   ArrowRight,
   RefreshCw,
   Zap,
-  TrendingUp
+  TrendingUp,
+  Trash2
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
@@ -108,6 +109,13 @@ export default function HomePage() {
     setLevelUpData({ leveledUp: xpResult.leveledUp, newLevel: xpResult.newLevel });
     setCompletedQuest(quest);
     loadData();
+  };
+
+  const handleDeleteQuest = (quest: Quest) => {
+    if (confirm(`クエスト「${quest.title}」を削除しますか？`)) {
+      storage.deleteQuest(quest.id);
+      loadData();
+    }
   };
 
   const handleProgressUpdated = (updatedQuest: Quest, isCompleted: boolean) => {
@@ -314,14 +322,23 @@ export default function HomePage() {
                       </h4>
                     </div>
 
-                    {/* WHY Button */}
-                    <button
-                      onClick={() => setWhyQuest(quest)}
-                      className="p-1.5 rounded-full bg-stone-100 hover:bg-amber-100 text-stone-400 hover:text-amber-700 transition-colors shadow-inner"
-                      title="なぜこのクエストをやるのか？"
-                    >
-                      <HelpCircle className="w-4 h-4" />
-                    </button>
+                    {/* Actions (WHY & Delete) */}
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => setWhyQuest(quest)}
+                        className="p-1.5 rounded-full bg-stone-100 hover:bg-amber-100 text-stone-400 hover:text-amber-700 transition-colors shadow-inner"
+                        title="なぜこのクエストをやるのか？"
+                      >
+                        <HelpCircle className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteQuest(quest)}
+                        className="p-1.5 rounded-full bg-stone-100 hover:bg-rose-100 text-stone-400 hover:text-rose-600 transition-colors shadow-inner"
+                        title="クエストを削除"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
 
                   {quest.description && (
