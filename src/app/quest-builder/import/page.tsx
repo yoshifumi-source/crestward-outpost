@@ -10,6 +10,7 @@ import { AlertCircle, ArrowLeft, Download, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { translateAnalysisJson, translateText } from "@/lib/translator";
+import { extractAndParseJson } from "@/lib/jsonRepair";
 
 export default function QuestImportPage() {
   const router = useRouter();
@@ -24,21 +25,11 @@ export default function QuestImportPage() {
     }
 
     try {
-      let jsonString = content;
-      
-      const startTag = "---CRESTWARD_JSON_START---";
-      const endTag = "---CRESTWARD_JSON_END---";
-      
-      if (content.includes(startTag) && content.includes(endTag)) {
-        jsonString = content.split(startTag)[1].split(endTag)[0];
-      } else {
-        const match = content.match(/```json\n([\s\S]*?)\n```/) || content.match(/```([\s\S]*?)```/);
-        if (match) {
-          jsonString = match[1];
-        }
+      const rawParsed = extractAndParseJson(content);
+      if (!rawParsed) {
+        throw new Error("データの読み取りに失敗しました。");
       }
 
-      const rawParsed = JSON.parse(jsonString.trim());
       const parsed = translateAnalysisJson(rawParsed);
 
       if (!parsed.chapters) {
