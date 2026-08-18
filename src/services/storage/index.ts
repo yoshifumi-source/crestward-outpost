@@ -1,14 +1,17 @@
-import { 
-  Value, 
-  FutureVision, 
-  MainStory, 
-  Quest, 
-  Skill, 
-  Reward, 
-  StoryLog, 
-  DailyCheckIn, 
-  JournalEntry, 
+"use client";
+
+import {
   UserSettings,
+  Value,
+  FutureVision,
+  MainStory,
+  GoalProject,
+  Quest,
+  Skill,
+  Reward,
+  StoryLog,
+  DailyCheckIn,
+  JournalEntry,
   DiscoveryEvidence,
   Pattern,
   Tension,
@@ -18,74 +21,72 @@ import {
   Milestone
 } from "@/types";
 
-const PREFIX = "crestward_";
+const STORAGE_PREFIX = "crestward_";
 
-const get = <T>(key: string, defaultValue: T): T => {
+function get<T>(key: string, defaultValue: T): T {
   if (typeof window === "undefined") return defaultValue;
-  const stored = localStorage.getItem(`${PREFIX}${key}`);
-  if (!stored) return defaultValue;
+  const item = localStorage.getItem(STORAGE_PREFIX + key);
+  if (!item) return defaultValue;
   try {
-    return JSON.parse(stored) as T;
-  } catch {
+    return JSON.parse(item);
+  } catch (e) {
+    console.error(`Error parsing ${key}`, e);
     return defaultValue;
   }
-};
+}
 
-const set = <T>(key: string, value: T): void => {
+function set<T>(key: string, value: T): void {
   if (typeof window === "undefined") return;
-  localStorage.setItem(`${PREFIX}${key}`, JSON.stringify(value));
-};
-
-const DEFAULT_SETTINGS: UserSettings = {
-  name: "冒険者 Yoshifumi",
-  title: "見習い航海士",
-  level: 1,
-  xp: 0,
-  xpToNextLevel: 100,
-  onboardingCompleted: false,
-  currentHp: 100,
-  maxHp: 100,
-  currentMp: 10,
-  maxMp: 10,
-  gold: 50,
-};
+  try {
+    localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(value));
+  } catch (e) {
+    console.error(`Error saving ${key}`, e);
+  }
+}
 
 export const storage = {
-  // Settings & Status
-  getSettings: () => get<UserSettings>("settings", DEFAULT_SETTINGS),
+  // Settings & User
+  getSettings: (): UserSettings => get<UserSettings>("settings", {
+    name: "新米冒険者",
+    title: "自律を探求する者",
+    level: 1,
+    xp: 0,
+    xpToNextLevel: 100,
+    onboardingCompleted: false,
+    currentHp: 100,
+    maxHp: 100,
+    currentMp: 10,
+    maxMp: 10,
+    gold: 50,
+  }),
   saveSettings: (settings: UserSettings) => set("settings", settings),
 
-  // Level & XP System
-  addExperience: (xpGained: number): { newLevel: number; leveledUp: boolean; currentXp: number; nextLevelXp: number } => {
+  addExperience: (amount: number): { leveledUp: boolean; newLevel: number } => {
     const settings = storage.getSettings();
-    let { level, xp, xpToNextLevel } = settings;
-    xp += xpGained;
+    let currentXp = settings.xp + amount;
+    let level = settings.level;
+    let xpToNext = settings.xpToNextLevel;
     let leveledUp = false;
 
-    while (xp >= xpToNextLevel) {
-      xp -= xpToNextLevel;
+    while (currentXp >= xpToNext) {
+      currentXp -= xpToNext;
       level += 1;
-      xpToNextLevel = Math.floor(xpToNextLevel * 1.5);
+      xpToNext = Math.round(xpToNext * 1.5);
       leveledUp = true;
     }
 
-    const updated = { ...settings, level, xp, xpToNextLevel };
+    const updated = {
+      ...settings,
+      xp: currentXp,
+      level,
+      xpToNextLevel: xpToNext,
+      maxHp: 100 + (level - 1) * 10,
+      maxMp: 10 + (level - 1) * 2,
+    };
     storage.saveSettings(updated);
-
-    if (leveledUp) {
-      storage.addStoryLog({
-        id: `log_${Date.now()}`,
-        date: Date.now(),
-        type: "milestone_reached",
-        title: `レベルアップ！ Lv.${level} に到達`,
-        description: `経験値を積み、冒険者として新たな高みへと成長しました。`
-      });
-    }
-
-    return { newLevel: level, leveledUp, currentXp: xp, nextLevelXp: xpToNextLevel };
+    return { leveledUp, newLevel: level };
   },
 
-  // Gold System
   addGold: (goldGained: number) => {
     const settings = storage.getSettings();
     const updated = { ...settings, gold: Math.max(0, settings.gold + goldGained) };
@@ -101,26 +102,63 @@ export const storage = {
   getFutureVision: () => get<FutureVision | null>("future_vision", null),
   saveFutureVision: (vision: FutureVision) => set("future_vision", vision),
 
-  // Stories
+  // Stories (Level 2: Strategic Main Stories)
   getStories: () => get<MainStory[]>("stories", []),
   saveStories: (stories: MainStory[]) => set("stories", stories),
   getActiveStory: () => get<MainStory[]>("stories", []).find(s => s.status === "active"),
   deleteStory: (storyId: string) => {
     const stories = storage.getStories().filter(s => s.id !== storyId);
     storage.saveStories(stories);
-    // Also remove associated chapters, milestones, and quests
+    const projects = storage.getProjects().filter(p => p.storyId !== storyId);
+    storage.saveProjects(projects);
     const chapters = storage.getChapters().filter(c => c.storyId !== storyId);
     storage.saveChapters(chapters);
     const quests = storage.getQuests().filter(q => q.storyId !== storyId);
     storage.saveQuests(quests);
   },
 
-  // Quests
-  getQuests: () => get<Quest[]>("quests", []),
-  saveQuests: (quests: Quest[]) => set("quests", quests),
-  deleteQuest: (questId: string) => {
-    const quests = storage.getQuests().filter(q => q.id !== questId);
+  // Projects / Tracks (Level 3: Means & Projects under Story)
+  getProjects: () => get<GoalProject[]>("goal_projects", []),
+  saveProjects: (projects: GoalProject[]) => set("goal_projects", projects),
+  addProject: (project: GoalProject) => {
+    const current = storage.getProjects();
+    storage.saveProjects([...current, project]);
+    storage.recalculateStoryProgress(project.storyId);
+  },
+  deleteProject: (projectId: string) => {
+    const projects = storage.getProjects();
+    const target = projects.find(p => p.id === projectId);
+    const storyId = target?.storyId;
+    
+    storage.saveProjects(projects.filter(p => p.id !== projectId));
+    const milestones = storage.getMilestones().filter(m => m.projectId !== projectId);
+    storage.saveMilestones(milestones);
+    const quests = storage.getQuests().filter(q => q.projectId !== projectId);
     storage.saveQuests(quests);
+
+    if (storyId) {
+      storage.recalculateStoryProgress(storyId);
+    }
+  },
+
+  // Quests (Level 5: Executable Quests & Metrics)
+  getQuests: () => get<Quest[]>("quests", []),
+  saveQuests: (quests: Quest[]) => {
+    set("quests", quests);
+    const activeStory = storage.getActiveStory();
+    if (activeStory) {
+      storage.recalculateStoryProgress(activeStory.id);
+    }
+  },
+  deleteQuest: (questId: string) => {
+    const quests = storage.getQuests();
+    const target = quests.find(q => q.id === questId);
+    const storyId = target?.storyId;
+
+    storage.saveQuests(quests.filter(q => q.id !== questId));
+    if (storyId) {
+      storage.recalculateStoryProgress(storyId);
+    }
   },
   updateQuestMetric: (
     questId: string, 
@@ -149,6 +187,10 @@ export const storage = {
     target.metric.history = [logEntry, ...history];
 
     const isCompleted = newVal >= target.metric.targetValue;
+    if (isCompleted) {
+      target.status = "completed";
+      target.completedAt = Date.now();
+    }
 
     storage.saveQuests(quests);
 
@@ -160,6 +202,7 @@ export const storage = {
       description: `${amountAdded >= 0 ? `+${amountAdded}` : amountAdded} ${target.metric.unit} （累計: ${newVal}/${target.metric.targetValue} ${target.metric.unit}）${note ? ` - ${note}` : ""}`,
       questId: target.id,
       storyId: target.storyId,
+      projectId: target.projectId,
       metadata: {
         amountAdded,
         totalAfter: newVal,
@@ -169,7 +212,57 @@ export const storage = {
       }
     });
 
+    if (target.storyId) {
+      storage.recalculateStoryProgress(target.storyId);
+    }
+
     return { quest: target, isCompleted };
+  },
+
+  // Dynamic Cascade Progress Recalculator
+  recalculateStoryProgress: (storyId: string) => {
+    const allProjects = storage.getProjects();
+    const allQuests = storage.getQuests();
+    const storyQuests = allQuests.filter(q => q.storyId === storyId);
+
+    // Update each project's progress
+    const updatedProjects = allProjects.map(proj => {
+      if (proj.storyId !== storyId) return proj;
+      const projQuests = storyQuests.filter(q => q.projectId === proj.id);
+      if (projQuests.length === 0) return { ...proj, progress: 0 };
+
+      let totalPercent = 0;
+      projQuests.forEach(q => {
+        if (q.status === "completed") {
+          totalPercent += 100;
+        } else if (q.metric && q.metric.targetValue > 0) {
+          totalPercent += Math.min(100, (q.metric.currentValue / q.metric.targetValue) * 100);
+        }
+      });
+      const progress = Math.min(100, Math.round(totalPercent / projQuests.length));
+      return { ...proj, progress, updatedAt: Date.now() };
+    });
+    set("goal_projects", updatedProjects);
+
+    // Update Main Story progress
+    const allStories = storage.getStories();
+    const story = allStories.find(s => s.id === storyId);
+    if (story) {
+      let storyProgress = 0;
+      if (storyQuests.length > 0) {
+        let totalPercent = 0;
+        storyQuests.forEach(q => {
+          if (q.status === "completed") {
+            totalPercent += 100;
+          } else if (q.metric && q.metric.targetValue > 0) {
+            totalPercent += Math.min(100, (q.metric.currentValue / q.metric.targetValue) * 100);
+          }
+        });
+        storyProgress = Math.min(100, Math.round(totalPercent / storyQuests.length));
+      }
+      const updatedStories = allStories.map(s => s.id === storyId ? { ...s, progress: storyProgress, updatedAt: Date.now() } : s);
+      set("stories", updatedStories);
+    }
   },
 
   // Skills
@@ -199,10 +292,10 @@ export const storage = {
   saveStoryLogs: (logs: StoryLog[]) => set("story_logs", logs),
   addStoryLog: (log: StoryLog) => {
     const logs = storage.getStoryLogs();
-    set("story_logs", [log, ...logs]);
+    storage.saveStoryLogs([log, ...logs]);
   },
 
-  // Daily Check-ins
+  // Daily CheckIn
   getCheckIns: () => get<DailyCheckIn[]>("check_ins", []),
   saveCheckIns: (checkIns: DailyCheckIn[]) => set("check_ins", checkIns),
 
@@ -210,9 +303,11 @@ export const storage = {
   getJournals: () => get<JournalEntry[]>("journals", []),
   saveJournals: (journals: JournalEntry[]) => set("journals", journals),
 
-  // --- Guided Discovery ---
-  getDiscoveryEvidences: () => get<DiscoveryEvidence[]>("discovery_evidences", []),
-  saveDiscoveryEvidences: (evidences: DiscoveryEvidence[]) => set("discovery_evidences", evidences),
+  // Guided Discovery
+  getEvidence: () => get<DiscoveryEvidence[]>("discovery_evidence", []),
+  saveEvidence: (evidence: DiscoveryEvidence[]) => set("discovery_evidence", evidence),
+  getDiscoveryEvidences: () => get<DiscoveryEvidence[]>("discovery_evidence", []),
+  saveDiscoveryEvidences: (evidence: DiscoveryEvidence[]) => set("discovery_evidence", evidence),
 
   getPatterns: () => get<Pattern[]>("patterns", []),
   savePatterns: (patterns: Pattern[]) => set("patterns", patterns),
@@ -232,7 +327,7 @@ export const storage = {
   getMilestones: () => get<Milestone[]>("quest_milestones", []),
   saveMilestones: (milestones: Milestone[]) => set("quest_milestones", milestones),
 
-  // Preset Seeder (Sample Adventurer Setup for Instant Delight)
+  // Preset Seeder (Multi-Tier Goal & Quest Tree Setup)
   loadSamplePreset: () => {
     const now = Date.now();
     const todayStr = new Date().toISOString().split("T")[0];
@@ -253,71 +348,113 @@ export const storage = {
     };
 
     const values: Value[] = [
-      { id: "v_1", name: "創造性と表現 (Creativity)", level: 5, createdAt: now, updatedAt: now },
-      { id: "v_2", name: "家族との豊かな時間 (Family)", level: 5, createdAt: now, updatedAt: now },
+      { id: "v_1", name: "経済的・時間的自由 (Freedom)", level: 5, createdAt: now, updatedAt: now },
+      { id: "v_2", name: "創造性と表現 (Creativity)", level: 5, createdAt: now, updatedAt: now },
       { id: "v_3", name: "自己成長と学習 (Growth)", level: 4, createdAt: now, updatedAt: now },
       { id: "v_4", name: "健康とバイタリティ (Health)", level: 4, createdAt: now, updatedAt: now },
-      { id: "v_5", name: "経済的・時間的自由 (Freedom)", level: 4, createdAt: now, updatedAt: now }
+      { id: "v_5", name: "家族との豊かな時間 (Family)", level: 5, createdAt: now, updatedAt: now }
     ];
 
     const vision: FutureVision = {
       id: "fv_1",
-      content: "自分のアイデアと技術を形にして人々に価値を届け、家族と自由な時間を過ごしながら世界中を冒険する人生",
+      content: "お金と時間に縛られず、自分が誇れるプロダクトを世界に届けながら家族と豊かに暮らす人生",
       createdAt: now,
       updatedAt: now
     };
 
+    // Level 2: Main Story
     const story: MainStory = {
       id: "story_1",
-      title: "自律型プロダクトの開発と自由なライフスタイルの確立",
-      description: "自身の強みを活かしたWebアプリケーションをリリースし、収益と自由な時間の両立を達成する。",
+      title: "お金に不自由しない生活（副業で年収100万円アップ）",
+      description: "本業以外の複数の収益トラックを確立し、経済的自立と自由な時間の両立を達成する。",
       futureVisionId: "fv_1",
       status: "active",
-      progress: 35,
+      progress: 24,
       startedAt: now - 1000 * 60 * 60 * 24 * 14,
       createdAt: now,
       updatedAt: now
     };
 
-    const chapters: QuestChapter[] = [
-      { id: "ch_1", storyId: "story_1", title: "Chapter 1: コアプロダクトの完成と検証", order: 0, status: "active" },
-      { id: "ch_2", storyId: "story_1", title: "Chapter 2: ユーザー獲得と収益化モデルの確立", order: 1, status: "active" }
-    ];
-
-    const milestones: Milestone[] = [
-      { id: "ms_1", chapterId: "ch_1", title: "マイルストーン 1: アプリの主要機能とUIの徹底磨き込み", order: 0, status: "active" },
-      { id: "ms_2", chapterId: "ch_1", title: "マイルストーン 2: 最初のテストユーザーからのフィードバック収集", order: 1, status: "active" }
-    ];
-
-    const quests: Quest[] = [
+    // Level 3: Projects (Means / Tracks)
+    const projects: GoalProject[] = [
       {
-        id: "q_1",
-        title: "朝のチェックインを行い、本日の活動方針を決める",
-        description: "睡眠・気分・体調を記録し、本日のMP配分を計画する。",
+        id: "proj_app",
         storyId: "story_1",
-        chapterId: "ch_1",
-        milestoneId: "ms_1",
+        title: "📱 自作アプリの販売・リリースで稼ぐ",
+        description: "Web/スマホアプリを開発・公開し、月5〜10万円のストック収益を作る",
+        order: 0,
         status: "active",
-        difficulty: "easy",
-        mpCost: 1,
-        xpReward: 30,
-        goldReward: 15,
-        skillTags: ["自己管理", "マインドフルネス"],
+        progress: 35,
         createdAt: now
       },
       {
-        id: "q_2",
-        title: "開発・設計の専門書（全213ページ）を読み進める",
-        description: "読んだページ数を記録して、知識のインプットを習慣化する。",
+        id: "proj_lecture",
         storyId: "story_1",
-        chapterId: "ch_1",
-        milestoneId: "ms_1",
+        title: "🎤 職場外グループでの講演・出張で稼ぐ",
+        description: "専門知識や知見を活かして研修・セミナー・講演を行い、副収入を得る",
+        order: 1,
+        status: "active",
+        progress: 10,
+        createdAt: now
+      },
+      {
+        id: "proj_goods",
+        storyId: "story_1",
+        title: "📦 物品販売で月1万円を安定して稼ぐ",
+        description: "不用品整理や厳選アイテムの販売で即効性のあるキャッシュを生み出す",
+        order: 2,
+        status: "active",
+        progress: 0,
+        createdAt: now
+      }
+    ];
+
+    // Level 4: Milestones (Phases under Projects)
+    const milestones: Milestone[] = [
+      // Milestones under Project A: App
+      { id: "ms_app_1", chapterId: "ch_1", projectId: "proj_app", title: "① アプリ開発のための学習・インプット", order: 0, status: "active" },
+      { id: "ms_app_2", chapterId: "ch_1", projectId: "proj_app", title: "② v1.0 プロトタイプ開発", order: 1, status: "active" },
+      { id: "ms_app_3", chapterId: "ch_2", projectId: "proj_app", title: "③ リリース & 実機テスト・改善", order: 2, status: "active" },
+
+      // Milestones under Project B: Lecture
+      { id: "ms_lec_1", chapterId: "ch_1", projectId: "proj_lecture", title: "① 講演テーマ選定と企画書・スライド作成", order: 0, status: "active" },
+
+      // Milestones under Project C: Goods
+      { id: "ms_goods_1", chapterId: "ch_1", projectId: "proj_goods", title: "① 出品アイテムの選定と写真撮影・出品", order: 0, status: "active" }
+    ];
+
+    // Level 5: Quests & Metrics under Milestones
+    const quests: Quest[] = [
+      // App Project Quests
+      {
+        id: "q_app_1",
+        title: "アプリ開発の専門書テキストを探して選定する",
+        description: "最適な技術書・チュートリアルを選んで手元に用意する（所要時間10分）。",
+        storyId: "story_1",
+        projectId: "proj_app",
+        milestoneId: "ms_app_1",
+        status: "completed",
+        difficulty: "easy",
+        mpCost: 1,
+        xpReward: 40,
+        goldReward: 20,
+        skillTags: ["情報収集", "学習"],
+        completedAt: now - 86400000 * 3,
+        createdAt: now - 86400000 * 4
+      },
+      {
+        id: "q_app_2",
+        title: "専門書（全213ページ）を読み進める",
+        description: "日々の読書ページ数を記録し、知識をインプットする。",
+        storyId: "story_1",
+        projectId: "proj_app",
+        milestoneId: "ms_app_1",
         status: "active",
         difficulty: "normal",
         mpCost: 2,
         xpReward: 80,
         goldReward: 40,
-        skillTags: ["自己研鑽", "学習"],
+        skillTags: ["自己研鑽", "プログラミング"],
         metric: {
           targetValue: 213,
           currentValue: 55,
@@ -330,50 +467,110 @@ export const storage = {
         createdAt: now
       },
       {
-        id: "q_3",
-        title: "副業アプリの収益（目標100万円）を積み上げる",
-        description: "得られた売上・副業収入を記録して達成度を可視化する。",
+        id: "q_app_3",
+        title: "開発ツールの選定と初期環境セットアップ",
+        description: "エディタやフレームワークの準備を整える（所要時間15分）。",
         storyId: "story_1",
-        chapterId: "ch_1",
-        milestoneId: "ms_2",
+        projectId: "proj_app",
+        milestoneId: "ms_app_2",
+        status: "active",
+        difficulty: "easy",
+        mpCost: 1,
+        xpReward: 50,
+        goldReward: 25,
+        skillTags: ["エンジニアリング"],
+        createdAt: now
+      },
+      {
+        id: "q_app_4",
+        title: "v1.0 コア機能の画面モックとロジック実装",
+        description: "一番大事なコア機能のみを最小構成で実装する。",
+        storyId: "story_1",
+        projectId: "proj_app",
+        milestoneId: "ms_app_2",
         status: "active",
         difficulty: "hard",
         mpCost: 3,
-        xpReward: 200,
-        goldReward: 100,
-        skillTags: ["副業・収益化", "エンジニアリング"],
-        metric: {
-          targetValue: 1000000,
-          currentValue: 150000,
-          unit: "円",
-          history: [
-            { id: "mpl_3", date: now - 86400000 * 5, amountAdded: 50000, totalAfter: 50000, note: "初月サブスク収益" },
-            { id: "mpl_4", date: now - 86400000 * 2, amountAdded: 100000, totalAfter: 150000, note: "2ヶ月目収益" }
-          ]
-        },
+        xpReward: 150,
+        goldReward: 70,
+        skillTags: ["エンジニアリング"],
+        createdAt: now
+      },
+      {
+        id: "q_app_5",
+        title: "実機で使ってみて問題点・改善点を5つ洗い出す",
+        description: "自分で実際に操作し、使いにくい部分をメモする。",
+        storyId: "story_1",
+        projectId: "proj_app",
+        milestoneId: "ms_app_3",
+        status: "active",
+        difficulty: "normal",
+        mpCost: 2,
+        xpReward: 80,
+        goldReward: 40,
+        skillTags: ["品質改善", "UI/UX"],
+        createdAt: now
+      },
+
+      // Lecture Project Quests
+      {
+        id: "q_lec_1",
+        title: "社外向け講演のテーマ案を3つ書き出す",
+        description: "自分が話せて相手の役に立つトピックを箇条書きで整理する。",
+        storyId: "story_1",
+        projectId: "proj_lecture",
+        milestoneId: "ms_lec_1",
+        status: "active",
+        difficulty: "easy",
+        mpCost: 1,
+        xpReward: 40,
+        goldReward: 20,
+        skillTags: ["発信", "企画"],
+        createdAt: now
+      },
+
+      // Goods Project Quests
+      {
+        id: "q_goods_1",
+        title: "出品するアイテムを1つ選んで写真を撮影する",
+        description: "明るい場所で綺麗に撮影し、出品の準備をする。",
+        storyId: "story_1",
+        projectId: "proj_goods",
+        milestoneId: "ms_goods_1",
+        status: "active",
+        difficulty: "easy",
+        mpCost: 1,
+        xpReward: 40,
+        goldReward: 20,
+        skillTags: ["物販・実務"],
         createdAt: now
       }
+    ];
+
+    const chapters: QuestChapter[] = [
+      { id: "ch_1", storyId: "story_1", title: "第1フェーズ: 基礎構築とプロトタイプ", order: 0, status: "active" },
+      { id: "ch_2", storyId: "story_1", title: "第2フェーズ: リリースと収益化", order: 1, status: "active" }
     ];
 
     const experiments: Experiment[] = [
       {
         id: "exp_1",
-        title: "毎朝15分の散歩と日光浴の習慣化",
-        description: "朝のエネルギーと集中力を高めるための30日間実験。",
+        title: "毎朝30分のアプリ開発集中タイム",
+        description: "朝一番のエネルギーが高い時間にコードを書く30日間の実験。",
         durationDays: 30,
         status: "active",
         startedAt: now - 1000 * 60 * 60 * 24 * 7,
-        relatedValueIds: ["v_4"]
+        relatedValueIds: ["v_1", "v_2"]
       }
     ];
 
     const tensions: Tension[] = [
       {
         id: "ten_1",
-        title: "日常の業務に追われ、長期的な創作の時間が削られる",
+        title: "日常の業務に追われ、副業プロジェクトの時間が削られる",
         currentState: "目の前の作業に時間を奪われ、本当に作りたいものに着手できていない",
-        desiredState: "毎朝最優先で自分のコアプロジェクトに2時間を確保できている状態",
-        relatedValueIds: ["v_1", "v_5"],
+        desiredState: "毎朝最優先で自分のコアプロジェクトに時間を確保できている状態",
+        relatedValueIds: ["v_1", "v_2"],
         createdAt: now
       }
     ];
@@ -381,23 +578,22 @@ export const storage = {
     const futureScenes: FutureScene[] = [
       {
         id: "fs_1",
-        title: "陽の光が入る書斎で、家族の笑顔を感じながら創作に没頭する朝",
-        description: "時間と場所に縛られず、自分が誇れるプロダクトを世界に届けている情景。",
-        relatedValueIds: ["v_1", "v_2"],
+        title: "自作アプリからの収益通知を見ながら、家族と笑顔で朝食をとる風景",
+        description: "時間と場所に縛られず、自分が誇れるプロダクトを作りながら豊かに暮らしている。",
+        relatedValueIds: ["v_1", "v_5"],
         createdAt: now
       }
     ];
 
     const skills: Skill[] = [
-      { id: "sk_1", name: "プロダクト設計・UI/UX", level: 4, xp: 280 },
-      { id: "sk_2", name: "エンジニアリング", level: 5, xp: 450 },
-      { id: "sk_3", name: "自己管理・バイタリティ", level: 3, xp: 190 },
-      { id: "sk_4", name: "発信・ストーリーテリング", level: 2, xp: 110 }
+      { id: "sk_1", name: "アプリ開発・設計", level: 4, xp: 280 },
+      { id: "sk_2", name: "企画・プレゼン", level: 3, xp: 190 },
+      { id: "sk_3", name: "物販・マーケティング", level: 2, xp: 110 }
     ];
 
     const rewards: Reward[] = [
       { id: "rew_1", name: "極上のスペシャルティコーヒーブレイク ☕️", goldCost: 50 },
-      { id: "rew_2", name: "気になっていたビジネス書を1冊購入 📚", goldCost: 120 },
+      { id: "rew_2", name: "気になっていた専門書を1冊購入 📚", goldCost: 120 },
       { id: "rew_3", name: "家族とお気に入りのカフェでスイーツタイム 🍰", goldCost: 200 },
       { id: "rew_4", name: "週末の日帰り温泉・サウナリフレッシュ ♨️", goldCost: 350 }
     ];
@@ -405,17 +601,17 @@ export const storage = {
     const logs: StoryLog[] = [
       {
         id: "log_init_1",
-        date: now - 1000 * 60 * 60 * 24 * 3,
+        date: now - 1000 * 60 * 60 * 24 * 7,
         type: "story_started",
-        title: "新たな物語「自律型プロダクトの開発」を開始",
-        description: "未来の情景に向かって第一歩を踏み出しました。"
+        title: "大目標「お金に不自由しない生活（副業年収100万）」を開始",
+        description: "3つのプロジェクト（アプリ販売・講演・物販）を立ち上げました。"
       },
       {
         id: "log_init_2",
-        date: now - 1000 * 60 * 60 * 24 * 1,
+        date: now - 1000 * 60 * 60 * 24 * 3,
         type: "quest_completed",
-        title: "クエスト達成「開発環境と要件の整理」",
-        description: "80 XP と 40 Gold を獲得しました。"
+        title: "クエスト達成「アプリ開発の専門書テキストを探して選定」",
+        description: "40 XP と 20 Gold を獲得しました。"
       }
     ];
 
@@ -423,6 +619,7 @@ export const storage = {
     storage.saveValues(values);
     storage.saveFutureVision(vision);
     storage.saveStories([story]);
+    storage.saveProjects(projects);
     storage.saveChapters(chapters);
     storage.saveMilestones(milestones);
     storage.saveQuests(quests);
@@ -432,5 +629,7 @@ export const storage = {
     storage.saveSkills(skills);
     storage.saveRewards(rewards);
     storage.saveStoryLogs(logs);
+
+    storage.recalculateStoryProgress(story.id);
   }
 };

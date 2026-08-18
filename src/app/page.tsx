@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { storage } from "@/services/storage";
-import { UserSettings, MainStory, Quest, Experiment, Skill, QuestChapter, Milestone, FutureVision } from "@/types";
+import { UserSettings, MainStory, Quest, Experiment, Skill, QuestChapter, Milestone, FutureVision, GoalProject } from "@/types";
 import { AdventurerStatusCard } from "@/components/AdventurerStatusCard";
 import { DailyCheckInModal } from "@/components/DailyCheckInModal";
 import { QuestCompletionModal } from "@/components/QuestCompletionModal";
@@ -23,7 +23,8 @@ import {
   Zap,
   TrendingUp,
   Trash2,
-  BookOpen
+  BookOpen,
+  FolderKanban
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
@@ -33,6 +34,7 @@ export default function HomePage() {
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [mainStory, setMainStory] = useState<MainStory | null>(null);
   const [futureVision, setFutureVision] = useState<FutureVision | null>(null);
+  const [projects, setProjects] = useState<GoalProject[]>([]);
   const [todaysQuests, setTodaysQuests] = useState<Quest[]>([]);
   const [activeExperiments, setActiveExperiments] = useState<Experiment[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
@@ -59,6 +61,7 @@ export default function HomePage() {
     const active = stories.find(s => s.status === "active") || null;
     setMainStory(active);
     setFutureVision(storage.getFutureVision());
+    setProjects(storage.getProjects());
 
     const allQuests = storage.getQuests();
     setTodaysQuests(allQuests.filter(q => q.status === "active"));
@@ -175,19 +178,19 @@ export default function HomePage() {
           <div className="flex items-center justify-between mb-2 px-1">
             <h2 className="text-[11px] font-black text-stone-500 uppercase tracking-widest flex items-center gap-1.5">
               <Compass className="w-3.5 h-3.5 text-emerald-600" />
-              メインストーリー
+              戦略的大目標（メインストーリー）
             </h2>
             <button 
               onClick={() => router.push("/story")}
               className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-0.5"
             >
-              冒険の地図へ <ArrowRight className="w-3 h-3" />
+              多階層ツリーへ <ArrowRight className="w-3 h-3" />
             </button>
           </div>
 
           <div 
             onClick={() => router.push("/story")}
-            className="cursor-pointer glass-panel p-4 rounded-3xl border border-stone-200/80 shadow-sm hover:shadow-md transition-all group"
+            className="cursor-pointer glass-panel p-4 rounded-3xl border border-stone-200/80 shadow-sm hover:shadow-md transition-all group bg-gradient-to-br from-white to-stone-50/70"
           >
             <div className="flex justify-between items-start mb-2">
               <h3 className="font-black text-sm text-stone-800 group-hover:text-emerald-700 transition-colors leading-snug">
@@ -202,10 +205,22 @@ export default function HomePage() {
             </p>
 
             <div className="flex items-center justify-between text-[11px] font-bold text-stone-600 mb-1">
-              <span>全体の進行度</span>
+              <span>全体の統合達成度</span>
               <span className="font-mono text-emerald-700 font-black">{mainStory.progress}%</span>
             </div>
             <Progress value={mainStory.progress} className="h-2 bg-stone-100 *:bg-emerald-600" />
+
+            {/* Sub-projects preview pills */}
+            {projects.length > 0 && (
+              <div className="mt-3 pt-2.5 border-t border-stone-200/60 flex items-center gap-1.5 flex-wrap">
+                <span className="text-[10px] font-bold text-stone-400">達成手段:</span>
+                {projects.map(p => (
+                  <span key={p.id} className="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200/50 px-2 py-0.5 rounded-md">
+                    {p.title} ({p.progress}%)
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </section>
       ) : (
@@ -223,11 +238,11 @@ export default function HomePage() {
               サンプルで体験
             </Button>
             <Button 
-              onClick={() => router.push("/profile")}
+              onClick={() => router.push("/story")}
               variant="outline"
               className="flex-1 border-amber-400 text-amber-800 text-xs font-bold rounded-xl"
             >
-              自己探索を行う
+              目標を直接作成
             </Button>
           </div>
         </div>
@@ -275,10 +290,10 @@ export default function HomePage() {
             本日のクエスト
           </h2>
           <button
-            onClick={() => router.push("/quest-builder")}
+            onClick={() => router.push("/quests")}
             className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200/60"
           >
-            <Plus className="w-3 h-3" /> クエスト作成
+            <Plus className="w-3 h-3" /> クエスト一覧
           </button>
         </div>
 
@@ -289,14 +304,14 @@ export default function HomePage() {
             </div>
             <h3 className="font-bold text-sm text-stone-800">現在アクティブなクエストはありません</h3>
             <p className="text-xs font-medium text-stone-500 mt-1 mb-4">
-              AIと一緒にクエストラインを作成するか、サンプルデータを読み込みましょう。
+              航海図からクエストを追加するか、サンプルデータを読み込みましょう。
             </p>
             <div className="flex flex-col gap-2">
               <Button 
-                onClick={() => router.push("/quest-builder")}
+                onClick={() => router.push("/story")}
                 className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl py-5 font-bold text-xs shadow-md shadow-emerald-600/20"
               >
-                クエスト作成工房を開く
+                多階層ツリーを開く
               </Button>
               <Button 
                 onClick={handleLoadSample}
@@ -316,6 +331,8 @@ export default function HomePage() {
                 ? { label: "上級", color: "bg-rose-50 text-rose-700 border-rose-200" }
                 : { label: "中級", color: "bg-amber-50 text-amber-700 border-amber-200" };
 
+              const proj = projects.find(p => p.id === quest.projectId);
+              const ms = milestones.find(m => m.id === quest.milestoneId);
               const metric = quest.metric;
               const percent = metric ? Math.min(100, Math.round((metric.currentValue / metric.targetValue) * 1000) / 10) : 0;
 
@@ -324,6 +341,22 @@ export default function HomePage() {
                   key={quest.id} 
                   className="glass-panel p-4 rounded-2xl border border-stone-200/80 shadow-sm hover:shadow-md transition-all relative group overflow-hidden"
                 >
+                  {/* Project & Milestone Hierarchy Tag */}
+                  {(proj || ms) && (
+                    <div className="flex items-center gap-1.5 flex-wrap mb-1.5">
+                      {proj && (
+                        <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-mono text-[9px] font-black border border-indigo-200/60">
+                          <FolderKanban className="w-2.5 h-2.5" /> {proj.title}
+                        </span>
+                      )}
+                      {ms && (
+                        <span className="inline-block px-2 py-0.5 rounded bg-stone-100 text-stone-500 font-mono text-[9px] font-black">
+                          {ms.title}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1.5 flex-wrap">

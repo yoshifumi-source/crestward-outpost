@@ -1,13 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { storage } from "@/services/storage";
-import { Quest, QuestChapter, Milestone, QuestDifficulty, MainStory, QuestMetric } from "@/types";
+import { Quest, QuestChapter, Milestone, UserSettings, MainStory, QuestDifficulty, QuestMetric, GoalProject } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Progress } from "@/components/ui/progress";
 import { 
   Target, 
   CheckCircle2, 
@@ -17,30 +15,39 @@ import {
   Zap, 
   TrendingUp,
   BarChart2,
-  Trash2
+  Trash2,
+  FolderKanban,
+  ArrowLeft,
+  BookOpen
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { QuestCompletionModal } from "@/components/QuestCompletionModal";
 import { WhyExplanationModal } from "@/components/WhyExplanationModal";
 import { MetricProgressModal } from "@/components/MetricProgressModal";
+import { Progress } from "@/components/ui/progress";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function QuestsPage() {
   const router = useRouter();
   const [quests, setQuests] = useState<Quest[]>([]);
+  const [projects, setProjects] = useState<GoalProject[]>([]);
   const [chapters, setChapters] = useState<QuestChapter[]>([]);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [mainStory, setMainStory] = useState<MainStory | null>(null);
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "completed">("active");
-  const [diffFilter, setDiffFilter] = useState<"all" | "easy" | "normal" | "hard">("all");
+  const [diffFilter, setDiffFilter] = useState<"all" | QuestDifficulty>("all");
+  const [projectFilter, setProjectFilter] = useState<string>("all");
 
-  // Modals
+  // Add Quest Modal
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newDesc, setNewDesc] = useState("");
   const [newDiff, setNewDiff] = useState<QuestDifficulty>("normal");
-  const [newSkillTag, setNewSkillTag] = useState("");
+  const [newProjectId, setNewProjectId] = useState<string>("");
+  const [newMilestoneId, setNewMilestoneId] = useState<string>("");
   
   // Metric Target Option in Quick Add
   const [hasMetric, setHasMetric] = useState(false);
@@ -54,6 +61,7 @@ export default function QuestsPage() {
 
   const loadData = () => {
     setQuests(storage.getQuests());
+    setProjects(storage.getProjects());
     setChapters(storage.getChapters());
     setMilestones(storage.getMilestones());
     setMainStory(storage.getActiveStory() || null);
@@ -124,28 +132,31 @@ export default function QuestsPage() {
       };
     }
 
-    const newQuest: Quest = {
+    const quest: Quest = {
       id: `q_${Date.now()}`,
       title: newTitle.trim(),
       description: newDesc.trim(),
-      storyId: mainStory?.id || "custom",
+      storyId: mainStory ? mainStory.id : "story_general",
+      projectId: newProjectId ? newProjectId : undefined,
+      milestoneId: newMilestoneId ? newMilestoneId : undefined,
       status: "active",
       difficulty: newDiff,
       mpCost,
       xpReward,
       goldReward,
-      skillTags: newSkillTag.trim() ? [newSkillTag.trim()] : ["自己研鑽"],
+      skillTags: [],
       metric: metricObj,
       createdAt: Date.now()
     };
 
-    const allQuests = storage.getQuests();
-    storage.saveQuests([newQuest, ...allQuests]);
+    const currentQuests = storage.getQuests();
+    storage.saveQuests([quest, ...currentQuests]);
 
     setIsAddModalOpen(false);
     setNewTitle("");
     setNewDesc("");
-    setNewSkillTag("");
+    setNewProjectId("");
+    setNewMilestoneId("");
     setHasMetric(false);
     setNewMetricTarget("");
     loadData();
@@ -162,47 +173,53 @@ export default function QuestsPage() {
     }
   };
 
-  // Filtered Quests
   const filteredQuests = quests.filter(q => {
     if (statusFilter !== "all" && q.status !== statusFilter) return false;
     if (diffFilter !== "all" && q.difficulty !== diffFilter) return false;
+    if (projectFilter !== "all" && q.projectId !== projectFilter) return false;
     return true;
   });
 
   return (
     <main className="flex flex-col min-h-screen p-4 pb-28 mx-auto max-w-md">
       {/* Header */}
-      <header className="mb-4 pt-2">
+      <header className="mb-4 pt-1">
+        <div className="flex items-center justify-between mb-3 px-1">
+          <Link href="/" className="inline-flex items-center text-stone-400 hover:text-stone-700 text-xs font-bold transition-colors">
+            <ArrowLeft className="w-4 h-4 mr-1" /> ホームに戻る
+          </Link>
+          <button
+            onClick={() => router.push("/guide")}
+            className="text-[11px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 px-2.5 py-1 rounded-full flex items-center gap-1 shadow-2xs transition-colors"
+          >
+            <BookOpen className="w-3.5 h-3.5 text-emerald-600" />
+            使い方ガイド
+          </button>
+        </div>
+
         <div className="flex items-center justify-between mb-2 px-1">
           <div className="flex items-center gap-1.5">
-            <Target className="w-4 h-4 text-emerald-600" />
-            <h1 className="text-[11px] font-black text-emerald-800 uppercase tracking-widest">
+            <Target className="w-5 h-5 text-emerald-600" />
+            <h1 className="text-xl font-black text-stone-800 tracking-tight">
               クエスト掲示板
             </h1>
           </div>
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => setIsAddModalOpen(true)}
-              className="text-[11px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-3 py-1 rounded-full border border-emerald-200/80 flex items-center gap-1 transition-colors"
-            >
-              <Plus className="w-3 h-3" /> クイック追加
-            </button>
-            <button
-              onClick={() => router.push("/quest-builder")}
-              className="text-[11px] font-bold text-stone-700 bg-stone-100 hover:bg-stone-200 px-3 py-1 rounded-full border border-stone-200 flex items-center gap-1 transition-colors"
-            >
-              <Sparkles className="w-3 h-3 text-amber-500" /> AI作成
-            </button>
-          </div>
+          <Button
+            onClick={() => setIsAddModalOpen(true)}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-full py-1.5 px-3.5 text-xs font-bold shadow-sm flex items-center gap-1"
+          >
+            <Plus className="w-3.5 h-3.5" /> クエスト追加
+          </Button>
         </div>
-        <h2 className="text-xl font-black text-stone-800 leading-snug px-1">
-          実行可能なクエスト一覧
-        </h2>
+        <p className="text-xs font-medium text-stone-500 px-1 leading-relaxed">
+          今日できる小さな1歩を実行し、経験値（XP）とGoldを獲得しましょう。
+        </p>
       </header>
 
-      {/* Filter Tabs */}
-      <div className="mb-4 flex flex-col gap-2">
-        <div className="flex bg-stone-200/60 p-1 rounded-2xl">
+      {/* Filters */}
+      <div className="space-y-2 mb-4">
+        {/* Status filter tabs */}
+        <div className="flex bg-stone-100/80 p-1 rounded-2xl border border-stone-200/60">
           <button
             onClick={() => setStatusFilter("active")}
             className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all ${
@@ -229,22 +246,34 @@ export default function QuestsPage() {
           </button>
         </div>
 
-        {/* Difficulty filter chips */}
-        <div className="flex gap-1.5 overflow-x-auto py-1">
-          {(["all", "easy", "normal", "hard"] as const).map((d) => (
+        {/* Project filter chips */}
+        {projects.length > 0 && (
+          <div className="flex gap-1.5 overflow-x-auto py-0.5">
             <button
-              key={d}
-              onClick={() => setDiffFilter(d)}
-              className={`px-3 py-1 rounded-xl text-[11px] font-bold shrink-0 transition-all ${
-                diffFilter === d 
-                  ? "bg-stone-800 text-white shadow-xs" 
+              onClick={() => setProjectFilter("all")}
+              className={`px-2.5 py-1 rounded-xl text-[11px] font-bold shrink-0 transition-all ${
+                projectFilter === "all"
+                  ? "bg-indigo-600 text-white shadow-xs"
                   : "bg-white text-stone-600 border border-stone-200/80 hover:bg-stone-50"
               }`}
             >
-              {d === "all" ? "難易度: すべて" : d === "easy" ? "初級" : d === "hard" ? "上級" : "中級"}
+              全プロジェクト
             </button>
-          ))}
-        </div>
+            {projects.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => setProjectFilter(p.id)}
+                className={`px-2.5 py-1 rounded-xl text-[11px] font-bold shrink-0 transition-all ${
+                  projectFilter === p.id
+                    ? "bg-indigo-600 text-white shadow-xs"
+                    : "bg-white text-stone-600 border border-stone-200/80 hover:bg-stone-50"
+                }`}
+              >
+                {p.title}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Quests List */}
@@ -264,6 +293,7 @@ export default function QuestsPage() {
         ) : (
           filteredQuests.map((quest) => {
             const isCompleted = quest.status === "completed";
+            const proj = projects.find(p => p.id === quest.projectId);
             const ms = milestones.find(m => m.id === quest.milestoneId);
 
             const diffBadge = quest.difficulty === "easy" 
@@ -287,11 +317,20 @@ export default function QuestsPage() {
               >
                 <div className="flex justify-between items-start gap-2 mb-2">
                   <div>
-                    {ms && (
-                      <span className="inline-block px-2 py-0.5 rounded bg-stone-100 text-stone-500 font-mono text-[9px] font-black uppercase mb-1">
-                        {ms.title}
-                      </span>
-                    )}
+                    {/* Project & Milestone Hierarchy Tag */}
+                    <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                      {proj && (
+                        <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-mono text-[9px] font-black border border-indigo-200/60">
+                          <FolderKanban className="w-2.5 h-2.5" /> {proj.title}
+                        </span>
+                      )}
+                      {ms && (
+                        <span className="inline-block px-2 py-0.5 rounded bg-stone-100 text-stone-500 font-mono text-[9px] font-black">
+                          {ms.title}
+                        </span>
+                      )}
+                    </div>
+
                     <h3 className={`font-black text-sm leading-snug ${isCompleted ? 'text-stone-500 line-through' : 'text-stone-800'}`}>
                       {quest.title}
                     </h3>
@@ -375,7 +414,7 @@ export default function QuestsPage() {
                     </Button>
                   ) : (
                     <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
-                      <CheckCircle2 className="w-4 h-4" /> 完了済み
+                      <CheckCircle2 className="w-3.5 h-3.5" /> 達成完了
                     </span>
                   )}
                 </div>
@@ -389,25 +428,25 @@ export default function QuestsPage() {
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
         <DialogContent className="max-w-xs mx-auto rounded-3xl p-6 bg-white/95 backdrop-blur-xl border border-stone-100 shadow-2xl">
           <DialogHeader className="text-center">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-200 mx-auto flex items-center justify-center mb-2 shadow-sm">
-              <Plus className="w-6 h-6" />
+            <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-200 mx-auto flex items-center justify-center mb-2 shadow-sm">
+              <Plus className="w-5 h-5" />
             </div>
             <DialogTitle className="text-lg font-black text-stone-800">
-              クイッククエスト追加
+              クエストを追加
             </DialogTitle>
             <DialogDescription className="text-xs font-medium text-stone-500">
-              今日やるべき具体的なアクションを登録します。
+              今日できる具体的なアクションを設定します。
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-3 py-2 max-h-[60vh] overflow-y-auto pr-1">
             <div>
-              <label className="block text-xs font-bold text-stone-700 mb-1">タイトル</label>
+              <label className="block text-xs font-bold text-stone-700 mb-1">クエストタイトル</label>
               <Input 
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
-                placeholder="例: 参考書籍の読書を進める"
-                className="text-xs rounded-xl"
+                placeholder="例: 専門書のテキストを25ページ読む"
+                className="text-xs rounded-xl font-bold"
               />
             </div>
 
@@ -416,10 +455,56 @@ export default function QuestsPage() {
               <Textarea 
                 value={newDesc}
                 onChange={(e) => setNewDesc(e.target.value)}
-                placeholder="例: 毎日少しずつ進める"
-                className="text-xs min-h-[60px] resize-none rounded-xl"
+                placeholder="例: 第2章を集中して読む"
+                className="text-xs min-h-[50px] resize-none rounded-xl"
               />
             </div>
+
+            {/* Project (Level 3) & Milestone (Level 4) Parent Selector */}
+            {projects.length > 0 && (
+              <div className="p-3 bg-stone-50 rounded-2xl border border-stone-200/80 space-y-2">
+                <div>
+                  <label className="block text-[11px] font-bold text-stone-700 mb-1">
+                    所属プロジェクト（達成手段）
+                  </label>
+                  <select
+                    value={newProjectId}
+                    onChange={(e) => {
+                      setNewProjectId(e.target.value);
+                      setNewMilestoneId("");
+                    }}
+                    className="w-full text-xs font-bold rounded-xl border border-stone-200 p-2 bg-white text-stone-800"
+                  >
+                    <option value="">単発クエスト（指定なし）</option>
+                    {projects.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {newProjectId && (
+                  <div>
+                    <label className="block text-[10px] font-bold text-stone-500 mb-1">
+                      所属マイルストーン（工程）
+                    </label>
+                    <select
+                      value={newMilestoneId}
+                      onChange={(e) => setNewMilestoneId(e.target.value)}
+                      className="w-full text-xs font-bold rounded-xl border border-stone-200 p-2 bg-white text-stone-800"
+                    >
+                      <option value="">マイルストーンなし</option>
+                      {milestones.filter(m => m.projectId === newProjectId).map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Numeric Metric Target Option Toggle */}
             <div className="p-3 rounded-2xl bg-stone-50 border border-stone-200/80">
@@ -497,16 +582,6 @@ export default function QuestsPage() {
                 ))}
               </div>
             </div>
-
-            <div>
-              <label className="block text-xs font-bold text-stone-700 mb-1">強化スキルタグ (任意)</label>
-              <Input 
-                value={newSkillTag}
-                onChange={(e) => setNewSkillTag(e.target.value)}
-                placeholder="例: 読書, プログラミング, 習慣化"
-                className="text-xs rounded-xl"
-              />
-            </div>
           </div>
 
           <DialogFooter className="flex flex-col gap-2 mt-2">
@@ -515,13 +590,20 @@ export default function QuestsPage() {
               disabled={!newTitle.trim()}
               className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl py-5 font-bold text-xs shadow-md"
             >
-              クエストを登録する
+              クエストを作成
+            </Button>
+            <Button
+              onClick={() => setIsAddModalOpen(false)}
+              variant="ghost"
+              className="w-full text-stone-400 text-xs font-bold"
+            >
+              キャンセル
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Metric Progress Input Modal */}
+      {/* Metric Progress & WHY Modals */}
       <MetricProgressModal
         quest={progressQuest}
         isOpen={!!progressQuest}
@@ -529,23 +611,20 @@ export default function QuestsPage() {
         onProgressUpdated={handleProgressUpdated}
       />
 
-      {/* Completion & Why Modals */}
+      <WhyExplanationModal
+        quest={whyQuest}
+        milestone={milestones.find(m => m.id === whyQuest?.milestoneId)}
+        mainStory={mainStory}
+        isOpen={!!whyQuest}
+        onClose={() => setWhyQuest(null)}
+      />
+
       <QuestCompletionModal
         quest={completedQuest}
         leveledUp={levelUpData.leveledUp}
         newLevel={levelUpData.newLevel}
         isOpen={!!completedQuest}
         onClose={() => setCompletedQuest(null)}
-      />
-
-      <WhyExplanationModal
-        quest={whyQuest}
-        chapter={chapters.find(c => c.id === whyQuest?.chapterId)}
-        milestone={milestones.find(m => m.id === whyQuest?.milestoneId)}
-        mainStory={mainStory}
-        futureVision={storage.getFutureVision()}
-        isOpen={!!whyQuest}
-        onClose={() => setWhyQuest(null)}
       />
     </main>
   );

@@ -43,6 +43,21 @@ export type MainStory = {
   updatedAt: number;
 };
 
+export type ProjectStatus = "active" | "completed" | "dormant" | "paused";
+
+export type GoalProject = {
+  id: string;
+  storyId: string;
+  title: string; // 例: "アプリ販売で稼ぐ", "社外講演・出張", "物品販売"
+  description?: string;
+  icon?: string;
+  order: number;
+  status: ProjectStatus;
+  progress: number; // 0-100
+  createdAt: number;
+  updatedAt?: number;
+};
+
 export type QuestDifficulty = "easy" | "normal" | "hard" | "very_hard";
 export type QuestStatus = "active" | "completed" | "paused" | "abandoned";
 
@@ -66,6 +81,7 @@ export type Quest = {
   title: string;
   description: string;
   storyId: string;
+  projectId?: string;
   parentQuestId?: string;
   chapterId?: string;
   milestoneId?: string;
@@ -112,7 +128,8 @@ export type LogType =
   | "experiment_completed"
   | "story_candidate_selected"
   | "ai_analysis_imported"
-  | "quest_line_created";
+  | "quest_line_created"
+  | "project_created";
 
 export type StoryLog = {
   id: string;
@@ -121,6 +138,7 @@ export type StoryLog = {
   title: string;
   description?: string;
   storyId?: string;
+  projectId?: string;
   questId?: string;
   metadata?: Record<string, any>;
 };
@@ -228,6 +246,7 @@ export interface Experiment {
 export interface QuestChapter {
   id: string;
   storyId: string;
+  projectId?: string;
   title: string;
   order: number;
   status: "active" | "completed";
@@ -236,6 +255,7 @@ export interface QuestChapter {
 export interface Milestone {
   id: string;
   chapterId: string;
+  projectId?: string;
   title: string;
   order: number;
   status: "active" | "completed";
