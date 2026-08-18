@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { storage } from "@/services/storage";
 import { MainStory, QuestChapter, Milestone, Quest } from "@/types";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { 
   ArrowLeft, 
   ArrowRight, 
@@ -16,14 +18,18 @@ import {
   Wand2, 
   Zap, 
   Clock, 
-  ShieldCheck, 
   HelpCircle,
-  Play
+  Plus,
+  Compass,
+  Target,
+  Edit3,
+  ChevronDown
 } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
-// Preset option choices
+// Preset option choices for situation
 const SITUATION_PRESETS = [
   { id: "unknown", icon: HelpCircle, label: "何から手をつければいいか全く分からない", hint: "（道具調べ・情報収集から始めたい）" },
   { id: "hands_on", icon: Hammer, label: "小さく手を動かして実験から始めたい", hint: "（座学より実践重視）" },
@@ -36,22 +42,91 @@ const PACE_PRESETS = [
   { id: "quick_win", label: "⚡️ 最初の1週間で目に見える成果を作りたい" }
 ];
 
+// Quick Goal Ideas
+const GOAL_IDEAS = [
+  { title: "副業アプリを開発・リリースして年収100万円アップ", desc: "自作Webプロダクトをリリースし、収益と自由な時間の両立を目指す" },
+  { title: "開発・設計の専門書（全213ページ）を読破する", desc: "日々の読書ページ数を記録し、知識とスキルを自分の武器にする" },
+  { title: "月間走行距離300kmのランニング習慣をつける", desc: "実年齢マイナス20歳の体力とエネルギーを維持する" },
+  { title: "毎朝30分の集中プログラミング時間を確立する", desc: "朝の時間を活用して新しいプロダクトやスキルに没頭する" }
+];
+
 export default function QuestBuilderPage() {
   const router = useRouter();
+  const [allStories, setAllStories] = useState<MainStory[]>([]);
   const [activeStory, setActiveStory] = useState<MainStory | null>(null);
   
   // Selected choice chips
   const [selectedSituation, setSelectedSituation] = useState<string>("unknown");
   const [selectedPace, setSelectedPace] = useState<string>("small");
   
+  // Create / Switch Story Dialogs
+  const [isCreateStoryOpen, setIsCreateStoryOpen] = useState(false);
+  const [newStoryTitle, setNewStoryTitle] = useState("");
+  const [newStoryDesc, setNewStoryDesc] = useState("");
+
   const [promptText, setPromptText] = useState("");
   const [copied, setCopied] = useState(false);
   const [showPrompt, setShowPrompt] = useState(false);
 
+  const loadData = () => {
+    const stories = storage.getStories();
+    setAllStories(stories);
+    const active = stories.find(s => s.status === "active") || stories[0] || null;
+    setActiveStory(active);
+  };
+
   useEffect(() => {
-    const story = storage.getActiveStory();
-    if (story) setActiveStory(story);
+    loadData();
   }, []);
+
+  const handleCreateNewStory = () => {
+    if (!newStoryTitle.trim()) return;
+
+    const stories = storage.getStories();
+    // Set old active stories to dormant
+    const updatedStories = stories.map(s => s.status === "active" ? { ...s, status: "dormant" as const } : s);
+
+    const createdStory: MainStory = {
+      id: `story_${Date.now()}`,
+      title: newStoryTitle.trim(),
+      description: newStoryDesc.trim() || "自己成長と目標の実現を目指す",
+      status: "active",
+      progress: 0,
+      startedAt: Date.now(),
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+
+    storage.saveStories([createdStory, ...updatedStories]);
+
+    const settings = storage.getSettings();
+    settings.onboardingCompleted = true;
+    storage.saveSettings(settings);
+
+    storage.addStoryLog({
+      id: `log_${Date.now()}`,
+      date: Date.now(),
+      type: "story_started",
+      title: `新しい目標（メインクエスト）を設定: ${createdStory.title}`,
+      description: createdStory.description,
+      storyId: createdStory.id
+    });
+
+    setIsCreateStoryOpen(false);
+    setNewStoryTitle("");
+    setNewStoryDesc("");
+    loadData();
+  };
+
+  const handleSelectStory = (storyId: string) => {
+    const stories = storage.getStories();
+    const updated = stories.map(s => ({
+      ...s,
+      status: s.id === storyId ? ("active" as const) : s.status === "active" ? ("dormant" as const) : s.status
+    }));
+    storage.saveStories(updated);
+    loadData();
+  };
 
   const handleGeneratePrompt = (overrideSituation?: string, overridePace?: string) => {
     if (!activeStory) return;
@@ -64,17 +139,15 @@ export default function QuestBuilderPage() {
 
     const template = `あなたは、人生設計・行動変容を支援するプロの「クエストビルダー（RPG設計者）」です。
 
-ユーザーは「${activeStory.title}」という大きなメインストーリー（目標）を持っていますが、
-遠い目標であるため「最初の中間目標（マイルストーン）や、具体的に今日明日何から手をつければいいのか」が分からない状態です。
-
-あなた（AI）が導き手として、このストーリーを達成するための「第1章〜第3章」のロードマップと、
-今日からすぐ始められる具体的なクエスト（1回5〜15分程度のアクション）を【100%自然な日本語】で設計してください。
+ユーザーは「${activeStory.title}」という目標（メインクエスト）を設定しました。
+この目標を達成するために、実行可能な「第1章〜第3章」のロードマップと、
+今日からすぐ始められる具体的なサブクエスト（1回5〜15分程度のアクション）を【100%自然な日本語】で設計してください。
 
 【ユーザーの現在の状況・希望ペース】
 - 現在地・心境: ${situationText}
 - 希望ペース: ${paceText}
 
-【メインストーリー（目標）】
+【メインクエスト（目標）】
 - タイトル: ${activeStory.title}
 - 目的・目指す姿: ${activeStory.description || "自己成長と理想のライフスタイルの実現"}
 
@@ -86,8 +159,9 @@ export default function QuestBuilderPage() {
    - 第2章: 「小さな実践と実験フェーズ」（最初の手応え・成果を得る中級クエスト）
    - 第3章: 「習慣化と発展フェーズ」（目標を形にし継続する上級クエスト）
 3. 難易度は "easy"（初級・消費MP1）、"normal"（中級・消費MP2）、"hard"（上級・消費MP3）のいずれかで設定してください。
+4. 読書や売上、ランニング距離などの数値目標がある場合は、"metric": { "targetValue": 213, "unit": "ページ" } のように数値目標も含めてください。
 
-まず、ユーザーを応援する温かいアドバイスと解説を出力してください。
+まず、ユーザーを応援する温かいアドバイスを出力してください。
 その後、アプリが自動取り込みできるよう、必ず末尾に以下の形式でJSONを出力してください。
 JSONの前後に必ず ---CRESTWARD_JSON_START--- と ---CRESTWARD_JSON_END--- を記載してください。
 
@@ -143,7 +217,6 @@ JSONの前後に必ず ---CRESTWARD_JSON_START--- と ---CRESTWARD_JSON_END--- �
   const handleApplyQuickPreset = () => {
     if (!activeStory) return;
 
-    // Direct 1-click template creation without needing external AI
     const chapterId1 = `ch_${Date.now()}_1`;
     const chapterId2 = `ch_${Date.now()}_2`;
 
@@ -230,63 +303,101 @@ JSONの前後に必ず ---CRESTWARD_JSON_START--- と ---CRESTWARD_JSON_END--- �
     setTimeout(() => setCopied(false), 3000);
   };
 
-  if (!activeStory) {
-    return (
-      <div className="min-h-screen flex flex-col p-6 max-w-md mx-auto pt-10 text-center">
-        <p className="text-stone-500 font-bold mb-4">進行中のメインストーリーがありません。</p>
-        <Link href="/profile" className="text-emerald-600 font-bold text-xs underline">
-          自己探索ガイドからストーリーを作成する
-        </Link>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen flex flex-col p-6 max-w-md mx-auto pt-6 pb-24">
-      <header className="mb-5">
-        <Link href="/" className="inline-flex items-center text-stone-400 hover:text-stone-700 text-xs font-bold mb-4 transition-colors">
+      <header className="mb-4">
+        <Link href="/" className="inline-flex items-center text-stone-400 hover:text-stone-700 text-xs font-bold mb-3 transition-colors">
           <ArrowLeft className="w-4 h-4 mr-1" /> ホームに戻る
         </Link>
-        <div className="flex items-center gap-2 mb-1">
-          <Hammer className="w-5 h-5 text-emerald-600" />
-          <h1 className="text-xl font-black text-stone-800 tracking-tight">
-            クエスト作成工房
-          </h1>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Hammer className="w-5 h-5 text-emerald-600" />
+            <h1 className="text-xl font-black text-stone-800 tracking-tight">
+              クエスト作成工房
+            </h1>
+          </div>
+          <button
+            onClick={() => setIsCreateStoryOpen(true)}
+            className="text-[11px] font-black text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 px-3 py-1.5 rounded-full flex items-center gap-1 shadow-2xs transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" /> 目標を新規作成
+          </button>
         </div>
-        <p className="text-xs font-medium text-stone-500 leading-relaxed">
-          大きな目標（ストーリー）を、今日すぐできる「小さなクエスト」にAIが自動分解します。
+        <p className="text-xs font-medium text-stone-500 mt-1 leading-relaxed">
+          目標（メインクエスト）を決め、実行可能なサブクエストを自動生成します。
         </p>
       </header>
 
+      {/* Target Story Header Card */}
+      {activeStory ? (
+        <Card className="bg-emerald-50/70 border-emerald-200/90 shadow-2xs rounded-2xl mb-4 relative overflow-hidden">
+          <CardContent className="p-4">
+            <div className="flex justify-between items-start mb-1">
+              <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest flex items-center gap-1">
+                <Target className="w-3 h-3 text-emerald-600" /> 現在の目標（メインクエスト）
+              </span>
+              <button
+                onClick={() => setIsCreateStoryOpen(true)}
+                className="text-[10px] font-bold text-stone-500 hover:text-stone-800 flex items-center gap-0.5 bg-white/80 px-2 py-0.5 rounded-md border border-stone-200"
+              >
+                変更 <Edit3 className="w-3 h-3" />
+              </button>
+            </div>
+            <h2 className="font-black text-sm text-stone-800 leading-snug">{activeStory.title}</h2>
+            {activeStory.description && (
+              <p className="text-xs text-stone-600 mt-1 leading-relaxed">{activeStory.description}</p>
+            )}
+
+            {/* If there are other stories, allow quick switching */}
+            {allStories.length > 1 && (
+              <div className="mt-3 pt-2 border-t border-emerald-200/60 flex items-center gap-1.5 flex-wrap">
+                <span className="text-[10px] font-bold text-stone-400">他の目標:</span>
+                {allStories.filter(s => s.id !== activeStory.id).map(s => (
+                  <button
+                    key={s.id}
+                    onClick={() => handleSelectStory(s.id)}
+                    className="text-[10px] font-bold text-stone-600 hover:text-stone-900 bg-white px-2 py-0.5 rounded-md border border-stone-200"
+                  >
+                    {s.title}
+                  </button>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="p-6 rounded-3xl bg-amber-50 border border-amber-200 text-center mb-4 shadow-sm">
+          <Target className="w-10 h-10 text-amber-600 mx-auto mb-2" />
+          <h2 className="font-black text-sm text-stone-800 mb-1">まだ目標（メインクエスト）がありません</h2>
+          <p className="text-xs text-stone-600 mb-4 leading-relaxed">
+            まずは達成したい目標を1つ作成して、そこからサブクエストを展開しましょう！
+          </p>
+          <Button
+            onClick={() => setIsCreateStoryOpen(true)}
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl py-5 font-bold text-xs shadow-md"
+          >
+            <Plus className="w-4 h-4 mr-1.5" /> 自分で目標を作成する
+          </Button>
+        </div>
+      )}
+
       {!showPrompt ? (
         <div className="space-y-4">
-          {/* Target Story Card */}
-          <Card className="bg-emerald-50/60 border-emerald-200/80 shadow-2xs rounded-2xl">
-            <CardContent className="p-4">
-              <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest block mb-1">
-                分解するメインストーリー
-              </span>
-              <h2 className="font-black text-sm text-stone-800 leading-snug">{activeStory.title}</h2>
-              {activeStory.description && (
-                <p className="text-xs text-stone-600 mt-1 leading-relaxed">{activeStory.description}</p>
-              )}
-            </CardContent>
-          </Card>
-
           {/* Primary Quick Choice: AI Full Auto */}
           <div className="p-4 rounded-3xl bg-gradient-to-r from-stone-900 to-stone-800 text-white shadow-lg border border-stone-700">
             <div className="flex items-center gap-2 text-amber-400 text-xs font-black mb-1">
               <Sparkles className="w-4 h-4" /> 一番おすすめ（入力不要）
             </div>
             <p className="text-xs text-stone-300 mb-3 leading-relaxed">
-              目標までの道筋が分からなくても大丈夫です。AIが第1章〜第3章と今日できるクエストを自動設計します。
+              目標までの道筋が分からなくても大丈夫です。AIが第1章〜第3章と今日できるサブクエストを自動設計します。
             </p>
             <Button 
+              disabled={!activeStory}
               onClick={() => handleGeneratePrompt("unknown", "small")}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl py-6 text-sm font-bold shadow-md shadow-emerald-600/30"
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl py-6 text-sm font-bold shadow-md shadow-emerald-600/30 disabled:opacity-50"
             >
               <Wand2 className="w-4 h-4 mr-2" />
-              AIにおまかせでクエストを分解する
+              AIにおまかせでサブクエストを分解する
             </Button>
           </div>
 
@@ -352,21 +463,31 @@ JSONの前後に必ず ---CRESTWARD_JSON_START--- と ---CRESTWARD_JSON_END--- �
           </div>
 
           <Button 
+            disabled={!activeStory}
             onClick={() => handleGeneratePrompt()}
-            className="w-full bg-stone-900 hover:bg-black text-white rounded-2xl py-6 text-sm font-bold shadow-md"
+            className="w-full bg-stone-900 hover:bg-black text-white rounded-2xl py-6 text-sm font-bold shadow-md disabled:opacity-50"
           >
             <Sparkles className="w-4 h-4 mr-2 text-amber-400" />
             選択した条件でAIプロンプトを生成する
           </Button>
 
           {/* Direct Template Loader (No AI needed) */}
-          <div className="pt-2">
+          <div className="pt-2 space-y-2">
             <button
+              disabled={!activeStory}
               onClick={handleApplyQuickPreset}
-              className="w-full p-3 rounded-2xl bg-amber-50 hover:bg-amber-100 border border-amber-200/80 text-amber-900 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
+              className="w-full p-3 rounded-2xl bg-amber-50 hover:bg-amber-100 border border-amber-200/80 text-amber-900 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
             >
               <Zap className="w-3.5 h-3.5 text-amber-600" />
               <span>AIを使わず「黄金の初期クエスト」を今すぐ自動生成する</span>
+            </button>
+
+            <button
+              onClick={() => router.push("/quests")}
+              className="w-full p-2.5 rounded-2xl bg-stone-100 hover:bg-stone-200 text-stone-600 text-xs font-bold flex items-center justify-center gap-1 transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>クエスト掲示板で手動でサブクエストを追加する</span>
             </button>
           </div>
         </div>
@@ -444,6 +565,88 @@ JSONの前後に必ず ---CRESTWARD_JSON_START--- と ---CRESTWARD_JSON_END--- �
           </div>
         </div>
       )}
+
+      {/* Modal to Create New Story / Goal */}
+      <Dialog open={isCreateStoryOpen} onOpenChange={setIsCreateStoryOpen}>
+        <DialogContent className="max-w-xs mx-auto rounded-3xl p-6 bg-white/95 backdrop-blur-xl border border-stone-100 shadow-2xl">
+          <DialogHeader className="text-center">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-200 mx-auto flex items-center justify-center mb-2 shadow-sm">
+              <Target className="w-6 h-6" />
+            </div>
+            <DialogTitle className="text-lg font-black text-stone-800">
+              目標（メインクエスト）を作成
+            </DialogTitle>
+            <DialogDescription className="text-xs font-medium text-stone-500">
+              あなたが達成したい目標や大きな物語を設定します。
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2 max-h-[60vh] overflow-y-auto pr-1">
+            <div>
+              <label className="block text-xs font-bold text-stone-700 mb-1">
+                目標タイトル
+              </label>
+              <Input
+                value={newStoryTitle}
+                onChange={(e) => setNewStoryTitle(e.target.value)}
+                placeholder="例: 副業で年収100万円アップ、専門書を読破"
+                className="text-xs rounded-xl font-bold"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-stone-700 mb-1">
+                目標の理由・目指す情景 (任意)
+              </label>
+              <Textarea
+                value={newStoryDesc}
+                onChange={(e) => setNewStoryDesc(e.target.value)}
+                placeholder="例: 経済的な自由と自信を手に入れ、自分の時間で生きる。"
+                className="text-xs min-h-[60px] resize-none rounded-xl"
+              />
+            </div>
+
+            {/* Quick Goal Idea Chips */}
+            <div>
+              <label className="block text-[10px] font-black text-stone-400 uppercase tracking-widest mb-1.5">
+                💡 目標のアイデア例（タップで入力）
+              </label>
+              <div className="space-y-1.5">
+                {GOAL_IDEAS.map((idea, idx) => (
+                  <div
+                    key={idx}
+                    onClick={() => {
+                      setNewStoryTitle(idea.title);
+                      setNewStoryDesc(idea.desc);
+                    }}
+                    className="p-2.5 rounded-xl bg-stone-50 hover:bg-emerald-50/80 border border-stone-200/70 hover:border-emerald-300 cursor-pointer text-left transition-all"
+                  >
+                    <span className="text-xs font-bold text-stone-800 block">{idea.title}</span>
+                    <span className="text-[10px] text-stone-500 line-clamp-1">{idea.desc}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="flex flex-col gap-2 mt-2">
+            <Button
+              onClick={handleCreateNewStory}
+              disabled={!newStoryTitle.trim()}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl py-5 font-bold text-xs shadow-md"
+            >
+              この目標を設定してクエスト作成へ
+            </Button>
+            <Button
+              onClick={() => setIsCreateStoryOpen(false)}
+              variant="ghost"
+              className="w-full text-stone-400 hover:text-stone-700 text-xs font-bold"
+            >
+              キャンセル
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
