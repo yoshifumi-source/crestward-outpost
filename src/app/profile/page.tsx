@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { storage } from "@/services/storage";
-import { UserSettings, Value, Skill, Tension, FutureScene, FutureVision } from "@/types";
+import { UserSettings, Value, Skill, Tension, FutureScene } from "@/types";
 import { 
   Compass, 
   Heart, 
@@ -15,8 +15,17 @@ import {
   Award, 
   Coins, 
   Shield, 
-  RefreshCw
+  RefreshCw,
+  Download,
+  Upload,
+  Copy,
+  Check,
+  CheckCircle2,
+  AlertTriangle
 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function CompassPage() {
   const router = useRouter();
@@ -26,6 +35,14 @@ export default function CompassPage() {
   const [tensions, setTensions] = useState<Tension[]>([]);
   const [futureScenes, setFutureScenes] = useState<FutureScene[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
+
+  // Backup & Restore Dialogs
+  const [isBackupOpen, setIsBackupOpen] = useState(false);
+  const [isRestoreOpen, setIsRestoreOpen] = useState(false);
+  const [backupJson, setBackupJson] = useState("");
+  const [restoreJson, setRestoreJson] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [restoreStatus, setRestoreStatus] = useState<string | null>(null);
 
   const loadData = () => {
     setSettings(storage.getSettings());
@@ -40,8 +57,33 @@ export default function CompassPage() {
     loadData();
   }, []);
 
+  const handleOpenBackup = () => {
+    const exported = storage.exportAllData();
+    setBackupJson(exported);
+    setIsBackupOpen(true);
+  };
+
+  const handleCopyBackup = () => {
+    navigator.clipboard.writeText(backupJson);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleExecuteRestore = () => {
+    if (!restoreJson.trim()) return;
+    const result = storage.importAllData(restoreJson.trim());
+    if (result.success) {
+      alert("✅ データを正常に復元しました！");
+      setIsRestoreOpen(false);
+      setRestoreJson("");
+      loadData();
+    } else {
+      setRestoreStatus(result.message);
+    }
+  };
+
   const handleResetSample = () => {
-    if (confirm("サンプル冒険者データを再読み込みしますか？現在のデータは更新されます。")) {
+    if (confirm("⚠️ 注意: サンプル冒険者データを再読み込みしますか？\n（現在のカスタム目標や記録は初期サンプルに置き換わります）")) {
       storage.loadSamplePreset();
       loadData();
       alert("サンプル冒険者データを読み込みました！");
@@ -63,12 +105,20 @@ export default function CompassPage() {
               自己の羅針盤（コンパス）
             </h1>
           </div>
-          <button
-            onClick={handleResetSample}
-            className="flex items-center gap-1 text-[10px] font-bold text-stone-500 hover:text-stone-800 bg-white border border-stone-200 px-2.5 py-1 rounded-full shadow-2xs"
-          >
-            <RefreshCw className="w-3 h-3" /> サンプル読込
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={handleOpenBackup}
+              className="flex items-center gap-1 text-[10px] font-bold text-stone-600 hover:text-stone-900 bg-white border border-stone-200 px-2.5 py-1 rounded-full shadow-2xs"
+            >
+              <Download className="w-3 h-3 text-emerald-600" /> バックアップ
+            </button>
+            <button
+              onClick={() => setIsRestoreOpen(true)}
+              className="flex items-center gap-1 text-[10px] font-bold text-stone-600 hover:text-stone-900 bg-white border border-stone-200 px-2.5 py-1 rounded-full shadow-2xs"
+            >
+              <Upload className="w-3 h-3 text-indigo-600" /> 復元
+            </button>
+          </div>
         </div>
 
         {/* Adventurer Identity Card */}
@@ -80,19 +130,17 @@ export default function CompassPage() {
               </div>
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-black text-stone-800 tracking-tight">{settings.name}</h2>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-300/80 font-mono">
-                  Lv. {settings.level}
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-mono">
+                  Lv.{settings.level}
                 </span>
+                <span className="text-xs font-bold text-stone-500">{settings.title}</span>
               </div>
-              <p className="text-xs font-bold text-emerald-700 mt-0.5 flex items-center gap-1">
-                <Award className="w-3.5 h-3.5" /> {settings.title}
-              </p>
+              <h2 className="text-lg font-black text-stone-800 tracking-tight">{settings.name}</h2>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 pt-3 border-t border-stone-100 text-center">
+          <div className="grid grid-cols-2 gap-2 text-center">
             <div className="p-2 rounded-xl bg-stone-50 border border-stone-100">
               <span className="text-[10px] font-bold text-stone-400 block">所持ゴールド</span>
               <span className="text-sm font-black text-amber-600 font-mono flex items-center justify-center gap-1 mt-0.5">
@@ -211,6 +259,121 @@ export default function CompassPage() {
           </div>
         </section>
       )}
+
+      {/* Danger Zone: Sample Reset */}
+      <section className="mt-8 pt-6 border-t border-stone-200 text-center">
+        <button
+          onClick={handleResetSample}
+          className="text-[11px] font-bold text-stone-400 hover:text-stone-700 flex items-center justify-center gap-1 mx-auto py-1 px-3 rounded-full hover:bg-stone-100 transition-colors"
+        >
+          <RefreshCw className="w-3 h-3" /> 初期サンプルデータに戻す
+        </button>
+      </section>
+
+      {/* Backup Dialog */}
+      <Dialog open={isBackupOpen} onOpenChange={setIsBackupOpen}>
+        <DialogContent className="max-w-md mx-auto rounded-3xl p-6 bg-white/95 backdrop-blur-xl border border-stone-100 shadow-2xl">
+          <DialogHeader className="text-center">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-200 mx-auto flex items-center justify-center mb-2 shadow-sm">
+              <Download className="w-6 h-6" />
+            </div>
+            <DialogTitle className="text-lg font-black text-stone-800">
+              データのバックアップ
+            </DialogTitle>
+            <DialogDescription className="text-xs font-medium text-stone-500">
+              作成した目標・クエスト・進捗ログなどの全データを保存できます。
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-2 text-left">
+            <label className="block text-xs font-bold text-stone-700 mb-1">バックアップJSON</label>
+            <Textarea
+              readOnly
+              value={backupJson}
+              className="text-xs font-mono min-h-[180px] resize-none rounded-2xl bg-stone-50 border-stone-200 p-3 leading-relaxed"
+            />
+          </div>
+
+          <DialogFooter className="flex flex-col gap-2 mt-2">
+            <Button
+              onClick={handleCopyBackup}
+              className="w-full bg-stone-900 hover:bg-black text-white rounded-2xl py-5 font-bold text-xs shadow-md flex items-center justify-center gap-1.5"
+            >
+              {copied ? (
+                <>
+                  <Check className="w-4 h-4 text-emerald-400" />
+                  クリップボードにコピーしました！
+                </>
+              ) : (
+                <>
+                  <Copy className="w-4 h-4" />
+                  バックアップJSONをコピー
+                </>
+              )}
+            </Button>
+            <Button
+              onClick={() => setIsBackupOpen(false)}
+              variant="ghost"
+              className="w-full text-stone-400 text-xs font-bold"
+            >
+              閉じる
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Restore Dialog */}
+      <Dialog open={isRestoreOpen} onOpenChange={setIsRestoreOpen}>
+        <DialogContent className="max-w-md mx-auto rounded-3xl p-6 bg-white/95 backdrop-blur-xl border border-stone-100 shadow-2xl">
+          <DialogHeader className="text-center">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 border border-indigo-200 mx-auto flex items-center justify-center mb-2 shadow-sm">
+              <Upload className="w-6 h-6" />
+            </div>
+            <DialogTitle className="text-lg font-black text-stone-800">
+              データの復元（インポート）
+            </DialogTitle>
+            <DialogDescription className="text-xs font-medium text-stone-500">
+              以前保存したバックアップJSONを貼り付けて復元します。
+            </DialogDescription>
+          </DialogHeader>
+
+          {restoreStatus && (
+            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 font-bold">
+              {restoreStatus}
+            </div>
+          )}
+
+          <div className="py-2 text-left">
+            <label className="block text-xs font-bold text-stone-700 mb-1">バックアップJSONを貼り付け</label>
+            <Textarea
+              value={restoreJson}
+              onChange={(e) => setRestoreJson(e.target.value)}
+              placeholder="ここにバックアップJSONを貼り付けてください..."
+              className="text-xs font-mono min-h-[180px] resize-none rounded-2xl bg-stone-50 border-stone-200 p-3 leading-relaxed"
+            />
+          </div>
+
+          <DialogFooter className="flex flex-col gap-2 mt-2">
+            <Button
+              onClick={handleExecuteRestore}
+              disabled={!restoreJson.trim()}
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl py-5 font-bold text-xs shadow-md"
+            >
+              このデータで復元する
+            </Button>
+            <Button
+              onClick={() => {
+                setIsRestoreOpen(false);
+                setRestoreStatus(null);
+              }}
+              variant="ghost"
+              className="w-full text-stone-400 text-xs font-bold"
+            >
+              キャンセル
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }

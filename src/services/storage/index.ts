@@ -46,20 +46,28 @@ function set<T>(key: string, value: T): void {
 
 export const storage = {
   // Settings & User
-  getSettings: (): UserSettings => get<UserSettings>("settings", {
-    name: "新米冒険者",
-    title: "自律を探求する者",
-    level: 1,
-    xp: 0,
-    xpToNextLevel: 100,
-    onboardingCompleted: false,
-    currentHp: 100,
-    maxHp: 100,
-    currentMp: 10,
-    maxMp: 10,
-    gold: 50,
-  }),
-  saveSettings: (settings: UserSettings) => set("settings", settings),
+  getSettings: (): UserSettings => {
+    const defaultSettings: UserSettings = {
+      name: "新米冒険者",
+      title: "自律を探求する者",
+      level: 1,
+      xp: 0,
+      xpToNextLevel: 100,
+      onboardingCompleted: true,
+      currentHp: 100,
+      maxHp: 100,
+      currentMp: 10,
+      maxMp: 10,
+      gold: 50,
+    };
+    const st = get<UserSettings>("settings", defaultSettings);
+    // Always ensure onboardingCompleted is true so mobile sessions never get kicked back
+    st.onboardingCompleted = true;
+    return st;
+  },
+  saveSettings: (settings: UserSettings) => {
+    set("settings", { ...settings, onboardingCompleted: true });
+  },
 
   addExperience: (amount: number): { leveledUp: boolean; newLevel: number } => {
     const settings = storage.getSettings();
@@ -718,5 +726,63 @@ export const storage = {
     storage.saveStoryLogs(logs);
 
     stories.forEach(s => storage.recalculateStoryProgress(s.id));
+  },
+
+  // Full Data Backup & Restore
+  exportAllData: (): string => {
+    const data = {
+      version: "1.0",
+      exportedAt: Date.now(),
+      settings: storage.getSettings(),
+      values: storage.getValues(),
+      futureVision: storage.getFutureVision(),
+      stories: storage.getStories(),
+      projects: storage.getProjects(),
+      chapters: storage.getChapters(),
+      milestones: storage.getMilestones(),
+      quests: storage.getQuests(),
+      experiments: storage.getExperiments(),
+      tensions: storage.getTensions(),
+      futureScenes: storage.getFutureScenes(),
+      skills: storage.getSkills(),
+      rewards: storage.getRewards(),
+      storyLogs: storage.getStoryLogs(),
+      checkIns: storage.getCheckIns(),
+      journals: storage.getJournals(),
+    };
+    return JSON.stringify(data, null, 2);
+  },
+
+  importAllData: (jsonStr: string): { success: boolean; message: string } => {
+    try {
+      const data = JSON.parse(jsonStr);
+      if (!data || typeof data !== "object") {
+        return { success: false, message: "無効なJSONデータです。" };
+      }
+
+      if (data.settings) storage.saveSettings(data.settings);
+      if (Array.isArray(data.values)) storage.saveValues(data.values);
+      if (data.futureVision) storage.saveFutureVision(data.futureVision);
+      if (Array.isArray(data.stories)) storage.saveStories(data.stories);
+      if (Array.isArray(data.projects)) storage.saveProjects(data.projects);
+      if (Array.isArray(data.chapters)) storage.saveChapters(data.chapters);
+      if (Array.isArray(data.milestones)) storage.saveMilestones(data.milestones);
+      if (Array.isArray(data.quests)) storage.saveQuests(data.quests);
+      if (Array.isArray(data.experiments)) storage.saveExperiments(data.experiments);
+      if (Array.isArray(data.tensions)) storage.saveTensions(data.tensions);
+      if (Array.isArray(data.futureScenes)) storage.saveFutureScenes(data.futureScenes);
+      if (Array.isArray(data.skills)) storage.saveSkills(data.skills);
+      if (Array.isArray(data.rewards)) storage.saveRewards(data.rewards);
+      if (Array.isArray(data.storyLogs)) storage.saveStoryLogs(data.storyLogs);
+      if (Array.isArray(data.checkIns)) storage.saveCheckIns(data.checkIns);
+      if (Array.isArray(data.journals)) storage.saveJournals(data.journals);
+
+      const stories = storage.getActiveStories();
+      stories.forEach(s => storage.recalculateStoryProgress(s.id));
+
+      return { success: true, message: "データを正常に復元しました！" };
+    } catch (e: any) {
+      return { success: false, message: `復元に失敗しました: ${e?.message || e}` };
+    }
   }
 };

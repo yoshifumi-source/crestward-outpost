@@ -58,13 +58,17 @@ export default function HomePage() {
   const [progressQuest, setProgressQuest] = useState<Quest | null>(null);
 
   const loadData = () => {
+    // If completely empty storage (first launch on brand new device), seed sample preset
+    const existingStories = storage.getStories();
+    const existingQuests = storage.getQuests();
+    const existingValues = storage.getValues();
+
+    if (existingStories.length === 0 && existingQuests.length === 0 && existingValues.length === 0) {
+      storage.loadSamplePreset();
+    }
+
     const st = storage.getSettings();
     setSettings(st);
-
-    if (!st.onboardingCompleted) {
-      router.push("/onboarding");
-      return;
-    }
 
     // Level 1
     setFutureVision(storage.getFutureVision());
