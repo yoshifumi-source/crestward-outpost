@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { storage } from "@/services/storage";
-import { UserSettings, MainStory, Quest, Experiment, Skill, QuestChapter, Milestone, FutureVision, GoalProject } from "@/types";
+import { UserSettings, MainStory, Quest, Experiment, Skill, QuestChapter, Milestone, FutureVision, Value, GoalProject } from "@/types";
 import { AdventurerStatusCard } from "@/components/AdventurerStatusCard";
 import { DailyCheckInModal } from "@/components/DailyCheckInModal";
 import { QuestCompletionModal } from "@/components/QuestCompletionModal";
@@ -18,13 +18,15 @@ import {
   Compass, 
   Flame, 
   FlaskConical, 
-  ArrowRight,
-  RefreshCw,
-  Zap,
-  TrendingUp,
-  Trash2,
-  BookOpen,
-  FolderKanban
+  ArrowRight, 
+  RefreshCw, 
+  Zap, 
+  TrendingUp, 
+  Trash2, 
+  BookOpen, 
+  FolderKanban,
+  Crown,
+  Edit3
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
@@ -32,8 +34,15 @@ export default function HomePage() {
   const router = useRouter();
   const [isLoaded, setIsLoaded] = useState(false);
   const [settings, setSettings] = useState<UserSettings | null>(null);
-  const [mainStory, setMainStory] = useState<MainStory | null>(null);
+  
+  // Level 1
   const [futureVision, setFutureVision] = useState<FutureVision | null>(null);
+  const [values, setValues] = useState<Value[]>([]);
+  
+  // Level 2 (Multiple active stories)
+  const [stories, setStories] = useState<MainStory[]>([]);
+
+  // Level 3, 4, 5
   const [projects, setProjects] = useState<GoalProject[]>([]);
   const [todaysQuests, setTodaysQuests] = useState<Quest[]>([]);
   const [activeExperiments, setActiveExperiments] = useState<Experiment[]>([]);
@@ -57,12 +66,16 @@ export default function HomePage() {
       return;
     }
 
-    const stories = storage.getStories();
-    const active = stories.find(s => s.status === "active") || null;
-    setMainStory(active);
+    // Level 1
     setFutureVision(storage.getFutureVision());
-    setProjects(storage.getProjects());
+    setValues(storage.getValues());
 
+    // Level 2: All active stories
+    const activeStories = storage.getStories().filter(s => s.status === "active");
+    setStories(activeStories);
+
+    // Level 3, 4, 5
+    setProjects(storage.getProjects());
     const allQuests = storage.getQuests();
     setTodaysQuests(allQuests.filter(q => q.status === "active"));
 
@@ -172,81 +185,125 @@ export default function HomePage() {
         onOpenCheckIn={() => setIsCheckInOpen(true)} 
       />
 
-      {/* Main Story Focus Banner */}
-      {mainStory ? (
-        <section className="mb-6">
-          <div className="flex items-center justify-between mb-2 px-1">
-            <h2 className="text-[11px] font-black text-stone-500 uppercase tracking-widest flex items-center gap-1.5">
-              <Compass className="w-3.5 h-3.5 text-emerald-600" />
-              戦略的大目標（メインストーリー）
-            </h2>
-            <button 
+      {/* ========================================================================= */}
+      {/* 🌟 LEVEL 1: ALWAYS-VISIBLE ROOT VISION BANNER (常時表示の究極の理想) */}
+      {/* ========================================================================= */}
+      <section className="mb-5">
+        <div className="p-4 rounded-3xl bg-gradient-to-br from-purple-950 via-stone-900 to-indigo-950 text-white border border-purple-800/40 shadow-sm relative overflow-hidden">
+          <div className="flex justify-between items-center mb-1.5">
+            <span className="text-[9px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-purple-500/30 text-purple-200 border border-purple-400/30 flex items-center gap-1">
+              <Sparkles className="w-3 h-3 text-amber-300" /> Level 1: 究極の理想・価値観 (ROOT)
+            </span>
+            <button
               onClick={() => router.push("/story")}
-              className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-0.5"
+              className="text-[10px] font-bold text-purple-300 hover:text-white flex items-center gap-0.5"
             >
-              多階層ツリーへ <ArrowRight className="w-3 h-3" />
+              航海図へ <ArrowRight className="w-2.5 h-2.5" />
             </button>
           </div>
 
-          <div 
-            onClick={() => router.push("/story")}
-            className="cursor-pointer glass-panel p-4 rounded-3xl border border-stone-200/80 shadow-sm hover:shadow-md transition-all group bg-gradient-to-br from-white to-stone-50/70"
-          >
-            <div className="flex justify-between items-start mb-2">
-              <h3 className="font-black text-sm text-stone-800 group-hover:text-emerald-700 transition-colors leading-snug">
-                {mainStory.title}
-              </h3>
-              <span className="shrink-0 text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                進行中
-              </span>
-            </div>
-            <p className="text-xs font-medium text-stone-500 line-clamp-2 leading-relaxed mb-3">
-              {mainStory.description}
-            </p>
-
-            <div className="flex items-center justify-between text-[11px] font-bold text-stone-600 mb-1">
-              <span>全体の統合達成度</span>
-              <span className="font-mono text-emerald-700 font-black">{mainStory.progress}%</span>
-            </div>
-            <Progress value={mainStory.progress} className="h-2 bg-stone-100 *:bg-emerald-600" />
-
-            {/* Sub-projects preview pills */}
-            {projects.length > 0 && (
-              <div className="mt-3 pt-2.5 border-t border-stone-200/60 flex items-center gap-1.5 flex-wrap">
-                <span className="text-[10px] font-bold text-stone-400">達成手段:</span>
-                {projects.map(p => (
-                  <span key={p.id} className="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200/50 px-2 py-0.5 rounded-md">
-                    {p.title} ({p.progress}%)
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
-      ) : (
-        <div className="mb-6 p-4 rounded-3xl bg-amber-50/80 border border-amber-200/80 text-center">
-          <Compass className="w-8 h-8 text-amber-600 mx-auto mb-2" />
-          <h3 className="font-black text-sm text-stone-800">メインストーリーが未設定です</h3>
-          <p className="text-xs font-medium text-stone-600 my-2">
-            まずはコンパスで価値観を見つけるか、サンプルデータを読み込んでみましょう。
+          <p className="text-xs font-bold text-stone-100 leading-relaxed mb-2 font-sans">
+            {futureVision?.content || "お金と時間に縛られず、自分が誇れるプロダクトを世界に届けながら豊かに暮らす人生"}
           </p>
-          <div className="flex gap-2 mt-3">
-            <Button 
-              onClick={handleLoadSample}
-              className="flex-1 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold py-2 shadow-sm"
-            >
-              サンプルで体験
-            </Button>
-            <Button 
-              onClick={() => router.push("/story")}
-              variant="outline"
-              className="flex-1 border-amber-400 text-amber-800 text-xs font-bold rounded-xl"
-            >
-              目標を直接作成
-            </Button>
-          </div>
+
+          {values.length > 0 && (
+            <div className="pt-2 border-t border-purple-800/50 flex items-center gap-1.5 flex-wrap">
+              {values.slice(0, 4).map(v => (
+                <span 
+                  key={v.id}
+                  className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-purple-900/60 text-purple-200 border border-purple-500/30 font-mono"
+                >
+                  {v.name}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
-      )}
+      </section>
+
+      {/* ========================================================================= */}
+      {/* 👑 LEVEL 2: MULTIPLE CONCURRENT STRATEGIC GOALS (複数進行中の大目標) */}
+      {/* ========================================================================= */}
+      <section className="mb-6">
+        <div className="flex items-center justify-between mb-2 px-1">
+          <h2 className="text-[11px] font-black text-stone-500 uppercase tracking-widest flex items-center gap-1.5">
+            <Crown className="w-3.5 h-3.5 text-amber-500" />
+            Level 2: 進行中の大目標（全 {stories.length} 件）
+          </h2>
+          <button 
+            onClick={() => router.push("/story")}
+            className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-0.5"
+          >
+            多階層ツリーへ <ArrowRight className="w-3 h-3" />
+          </button>
+        </div>
+
+        {stories.length === 0 ? (
+          <div className="p-4 rounded-3xl bg-amber-50/80 border border-amber-200/80 text-center">
+            <Compass className="w-8 h-8 text-amber-600 mx-auto mb-2" />
+            <h3 className="font-black text-sm text-stone-800">大目標が未設定です</h3>
+            <p className="text-xs font-medium text-stone-600 my-2">
+              サンプルデータを読み込むか、目標を新設しましょう。
+            </p>
+            <div className="flex gap-2 mt-3">
+              <Button 
+                onClick={handleLoadSample}
+                className="flex-1 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold py-2 shadow-sm"
+              >
+                サンプルで体験
+              </Button>
+              <Button 
+                onClick={() => router.push("/story")}
+                variant="outline"
+                className="flex-1 border-amber-400 text-amber-800 text-xs font-bold rounded-xl"
+              >
+                目標を直接作成
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {stories.map(story => {
+              const storyProjects = projects.filter(p => p.storyId === story.id);
+
+              return (
+                <div 
+                  key={story.id}
+                  onClick={() => router.push("/story")}
+                  className="cursor-pointer glass-panel p-4 rounded-3xl border border-stone-200/80 shadow-sm hover:shadow-md transition-all group bg-gradient-to-br from-white to-stone-50/70"
+                >
+                  <div className="flex justify-between items-start mb-1.5">
+                    <h3 className="font-black text-sm text-stone-800 group-hover:text-emerald-700 transition-colors leading-snug">
+                      {story.title}
+                    </h3>
+                    <span className="shrink-0 text-[10px] font-mono font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 ml-2">
+                      {story.progress}%
+                    </span>
+                  </div>
+
+                  <p className="text-xs font-medium text-stone-500 line-clamp-1 leading-relaxed mb-2.5">
+                    {story.description}
+                  </p>
+
+                  <Progress value={story.progress} className="h-1.5 bg-stone-100 *:bg-emerald-600" />
+
+                  {/* Sub-projects pills */}
+                  {storyProjects.length > 0 && (
+                    <div className="mt-2.5 pt-2 border-t border-stone-200/60 flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[9px] font-bold text-stone-400">手段:</span>
+                      {storyProjects.map(p => (
+                        <span key={p.id} className="text-[9px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200/50 px-2 py-0.5 rounded-md">
+                          {p.title} ({p.progress}%)
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
 
       {/* Active Experiments */}
       {activeExperiments.length > 0 && (
@@ -331,6 +388,7 @@ export default function HomePage() {
                 ? { label: "上級", color: "bg-rose-50 text-rose-700 border-rose-200" }
                 : { label: "中級", color: "bg-amber-50 text-amber-700 border-amber-200" };
 
+              const story = stories.find(s => s.id === quest.storyId);
               const proj = projects.find(p => p.id === quest.projectId);
               const ms = milestones.find(m => m.id === quest.milestoneId);
               const metric = quest.metric;
@@ -341,9 +399,14 @@ export default function HomePage() {
                   key={quest.id} 
                   className="glass-panel p-4 rounded-2xl border border-stone-200/80 shadow-sm hover:shadow-md transition-all relative group overflow-hidden"
                 >
-                  {/* Project & Milestone Hierarchy Tag */}
-                  {(proj || ms) && (
+                  {/* Goal & Project Hierarchy Tag */}
+                  {(story || proj || ms) && (
                     <div className="flex items-center gap-1.5 flex-wrap mb-1.5">
+                      {story && (
+                        <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 font-mono text-[9px] font-black border border-emerald-200/60">
+                          <Crown className="w-2.5 h-2.5 text-amber-500" /> {story.title}
+                        </span>
+                      )}
                       {proj && (
                         <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-mono text-[9px] font-black border border-indigo-200/60">
                           <FolderKanban className="w-2.5 h-2.5" /> {proj.title}
@@ -474,7 +537,7 @@ export default function HomePage() {
         quest={whyQuest}
         chapter={chapters.find(c => c.id === whyQuest?.chapterId)}
         milestone={milestones.find(m => m.id === whyQuest?.milestoneId)}
-        mainStory={mainStory}
+        mainStory={stories.find(s => s.id === whyQuest?.storyId) || null}
         futureVision={futureVision}
         isOpen={!!whyQuest}
         onClose={() => setWhyQuest(null)}

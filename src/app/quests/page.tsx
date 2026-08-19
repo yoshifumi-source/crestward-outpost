@@ -18,7 +18,8 @@ import {
   Trash2,
   FolderKanban,
   ArrowLeft,
-  BookOpen
+  BookOpen,
+  Crown
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { QuestCompletionModal } from "@/components/QuestCompletionModal";
@@ -31,14 +32,15 @@ import { useRouter } from "next/navigation";
 export default function QuestsPage() {
   const router = useRouter();
   const [quests, setQuests] = useState<Quest[]>([]);
+  const [stories, setStories] = useState<MainStory[]>([]);
   const [projects, setProjects] = useState<GoalProject[]>([]);
   const [chapters, setChapters] = useState<QuestChapter[]>([]);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
-  const [mainStory, setMainStory] = useState<MainStory | null>(null);
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "completed">("active");
   const [diffFilter, setDiffFilter] = useState<"all" | QuestDifficulty>("all");
+  const [storyFilter, setStoryFilter] = useState<string>("all");
   const [projectFilter, setProjectFilter] = useState<string>("all");
 
   // Add Quest Modal
@@ -46,6 +48,7 @@ export default function QuestsPage() {
   const [newTitle, setNewTitle] = useState("");
   const [newDesc, setNewDesc] = useState("");
   const [newDiff, setNewDiff] = useState<QuestDifficulty>("normal");
+  const [newStoryId, setNewStoryId] = useState<string>("");
   const [newProjectId, setNewProjectId] = useState<string>("");
   const [newMilestoneId, setNewMilestoneId] = useState<string>("");
   
@@ -60,11 +63,16 @@ export default function QuestsPage() {
   const [progressQuest, setProgressQuest] = useState<Quest | null>(null);
 
   const loadData = () => {
+    const activeStories = storage.getStories().filter(s => s.status === "active");
+    setStories(activeStories);
     setQuests(storage.getQuests());
     setProjects(storage.getProjects());
     setChapters(storage.getChapters());
     setMilestones(storage.getMilestones());
-    setMainStory(storage.getActiveStory() || null);
+
+    if (activeStories.length > 0 && !newStoryId) {
+      setNewStoryId(activeStories[0].id);
+    }
   };
 
   useEffect(() => {
@@ -136,7 +144,7 @@ export default function QuestsPage() {
       id: `q_${Date.now()}`,
       title: newTitle.trim(),
       description: newDesc.trim(),
-      storyId: mainStory ? mainStory.id : "story_general",
+      storyId: newStoryId || (stories.length > 0 ? stories[0].id : "story_general"),
       projectId: newProjectId ? newProjectId : undefined,
       milestoneId: newMilestoneId ? newMilestoneId : undefined,
       status: "active",
@@ -176,6 +184,7 @@ export default function QuestsPage() {
   const filteredQuests = quests.filter(q => {
     if (statusFilter !== "all" && q.status !== statusFilter) return false;
     if (diffFilter !== "all" && q.difficulty !== diffFilter) return false;
+    if (storyFilter !== "all" && q.storyId !== storyFilter) return false;
     if (projectFilter !== "all" && q.projectId !== projectFilter) return false;
     return true;
   });
@@ -246,30 +255,31 @@ export default function QuestsPage() {
           </button>
         </div>
 
-        {/* Project filter chips */}
-        {projects.length > 0 && (
+        {/* Story (Level 2) & Project (Level 3) Filter Chips */}
+        {stories.length > 1 && (
           <div className="flex gap-1.5 overflow-x-auto py-0.5">
             <button
-              onClick={() => setProjectFilter("all")}
+              onClick={() => setStoryFilter("all")}
               className={`px-2.5 py-1 rounded-xl text-[11px] font-bold shrink-0 transition-all ${
-                projectFilter === "all"
-                  ? "bg-indigo-600 text-white shadow-xs"
+                storyFilter === "all"
+                  ? "bg-emerald-700 text-white shadow-xs"
                   : "bg-white text-stone-600 border border-stone-200/80 hover:bg-stone-50"
               }`}
             >
-              全プロジェクト
+              全大目標
             </button>
-            {projects.map((p) => (
+            {stories.map((s) => (
               <button
-                key={p.id}
-                onClick={() => setProjectFilter(p.id)}
-                className={`px-2.5 py-1 rounded-xl text-[11px] font-bold shrink-0 transition-all ${
-                  projectFilter === p.id
-                    ? "bg-indigo-600 text-white shadow-xs"
+                key={s.id}
+                onClick={() => setStoryFilter(s.id)}
+                className={`px-2.5 py-1 rounded-xl text-[11px] font-bold shrink-0 transition-all flex items-center gap-1 ${
+                  storyFilter === s.id
+                    ? "bg-emerald-700 text-white shadow-xs"
                     : "bg-white text-stone-600 border border-stone-200/80 hover:bg-stone-50"
                 }`}
               >
-                {p.title}
+                <Crown className="w-2.5 h-2.5 text-amber-400" />
+                <span>{s.title}</span>
               </button>
             ))}
           </div>
@@ -293,6 +303,7 @@ export default function QuestsPage() {
         ) : (
           filteredQuests.map((quest) => {
             const isCompleted = quest.status === "completed";
+            const story = stories.find(s => s.id === quest.storyId);
             const proj = projects.find(p => p.id === quest.projectId);
             const ms = milestones.find(m => m.id === quest.milestoneId);
 
@@ -317,8 +328,13 @@ export default function QuestsPage() {
               >
                 <div className="flex justify-between items-start gap-2 mb-2">
                   <div>
-                    {/* Project & Milestone Hierarchy Tag */}
+                    {/* Story & Project Hierarchy Tag */}
                     <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                      {story && (
+                        <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 font-mono text-[9px] font-black border border-emerald-200/60">
+                          <Crown className="w-2.5 h-2.5 text-amber-500" /> {story.title}
+                        </span>
+                      )}
                       {proj && (
                         <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-mono text-[9px] font-black border border-indigo-200/60">
                           <FolderKanban className="w-2.5 h-2.5" /> {proj.title}
@@ -460,51 +476,72 @@ export default function QuestsPage() {
               />
             </div>
 
-            {/* Project (Level 3) & Milestone (Level 4) Parent Selector */}
-            {projects.length > 0 && (
-              <div className="p-3 bg-stone-50 rounded-2xl border border-stone-200/80 space-y-2">
+            {/* Story (Level 2) & Project (Level 3) & Milestone (Level 4) Parent Selector */}
+            <div className="p-3 bg-stone-50 rounded-2xl border border-stone-200/80 space-y-2">
+              {stories.length > 0 && (
                 <div>
                   <label className="block text-[11px] font-bold text-stone-700 mb-1">
-                    所属プロジェクト（達成手段）
+                    所属する大目標（Level 2）
                   </label>
                   <select
-                    value={newProjectId}
+                    value={newStoryId}
                     onChange={(e) => {
-                      setNewProjectId(e.target.value);
+                      setNewStoryId(e.target.value);
+                      setNewProjectId("");
                       setNewMilestoneId("");
                     }}
                     className="w-full text-xs font-bold rounded-xl border border-stone-200 p-2 bg-white text-stone-800"
                   >
-                    <option value="">単発クエスト（指定なし）</option>
-                    {projects.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.title}
+                    {stories.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        👑 {s.title}
                       </option>
                     ))}
                   </select>
                 </div>
+              )}
 
-                {newProjectId && (
-                  <div>
-                    <label className="block text-[10px] font-bold text-stone-500 mb-1">
-                      所属マイルストーン（工程）
-                    </label>
-                    <select
-                      value={newMilestoneId}
-                      onChange={(e) => setNewMilestoneId(e.target.value)}
-                      className="w-full text-xs font-bold rounded-xl border border-stone-200 p-2 bg-white text-stone-800"
-                    >
-                      <option value="">マイルストーンなし</option>
-                      {milestones.filter(m => m.projectId === newProjectId).map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {m.title}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
+              <div>
+                <label className="block text-[10px] font-bold text-stone-500 mb-1">
+                  所属プロジェクト（Level 3 手段）
+                </label>
+                <select
+                  value={newProjectId}
+                  onChange={(e) => {
+                    setNewProjectId(e.target.value);
+                    setNewMilestoneId("");
+                  }}
+                  className="w-full text-xs font-bold rounded-xl border border-stone-200 p-2 bg-white text-stone-800"
+                >
+                  <option value="">単発クエスト（指定なし）</option>
+                  {projects.filter(p => !newStoryId || p.storyId === newStoryId).map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.title}
+                    </option>
+                  ))}
+                </select>
               </div>
-            )}
+
+              {newProjectId && (
+                <div>
+                  <label className="block text-[10px] font-bold text-stone-500 mb-1">
+                    所属マイルストーン（Level 4 工程）
+                  </label>
+                  <select
+                    value={newMilestoneId}
+                    onChange={(e) => setNewMilestoneId(e.target.value)}
+                    className="w-full text-xs font-bold rounded-xl border border-stone-200 p-2 bg-white text-stone-800"
+                  >
+                    <option value="">マイルストーンなし</option>
+                    {milestones.filter(m => m.projectId === newProjectId).map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
 
             {/* Numeric Metric Target Option Toggle */}
             <div className="p-3 rounded-2xl bg-stone-50 border border-stone-200/80">
@@ -614,7 +651,7 @@ export default function QuestsPage() {
       <WhyExplanationModal
         quest={whyQuest}
         milestone={milestones.find(m => m.id === whyQuest?.milestoneId)}
-        mainStory={mainStory}
+        mainStory={stories.find(s => s.id === whyQuest?.storyId) || null}
         isOpen={!!whyQuest}
         onClose={() => setWhyQuest(null)}
       />

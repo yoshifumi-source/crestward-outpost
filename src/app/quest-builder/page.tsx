@@ -79,9 +79,6 @@ export default function QuestBuilderPage() {
   const handleCreateNewStory = () => {
     if (!newStoryTitle.trim()) return;
 
-    const stories = storage.getStories();
-    const updatedStories = stories.map(s => s.status === "active" ? { ...s, status: "dormant" as const } : s);
-
     const createdStory: MainStory = {
       id: `story_${Date.now()}`,
       title: newStoryTitle.trim(),
@@ -93,7 +90,7 @@ export default function QuestBuilderPage() {
       updatedAt: Date.now()
     };
 
-    storage.saveStories([createdStory, ...updatedStories]);
+    storage.addStory(createdStory);
 
     const settings = storage.getSettings();
     settings.onboardingCompleted = true;
@@ -115,13 +112,10 @@ export default function QuestBuilderPage() {
   };
 
   const handleSelectStory = (storyId: string) => {
-    const stories = storage.getStories();
-    const updated = stories.map(s => ({
-      ...s,
-      status: s.id === storyId ? ("active" as const) : s.status === "active" ? ("dormant" as const) : s.status
-    }));
-    storage.saveStories(updated);
-    loadData();
+    const target = allStories.find(s => s.id === storyId);
+    if (target) {
+      setActiveStory(target);
+    }
   };
 
   const handleGeneratePrompt = (overrideSituation?: string, overridePace?: string) => {
