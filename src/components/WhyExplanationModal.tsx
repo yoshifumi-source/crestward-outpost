@@ -49,21 +49,21 @@ export function WhyExplanationModal({
 
   const steps = [
     {
-      level: "Level 5: 現在挑戦中のクエスト",
+      level: "Level 4: 現在挑戦中のクエスト",
       title: quest.title,
       icon: Target,
       color: "border-emerald-500 bg-emerald-50 text-emerald-800",
       badgeColor: "bg-emerald-600 text-white"
     },
     ...(resolvedMilestone ? [{
-      level: "Level 4: 工程（マイルストーン）",
+      level: "Level 3: 工程（マイルストーン）",
       title: resolvedMilestone.title,
       icon: Flag,
       color: "border-teal-400 bg-teal-50 text-teal-900",
       badgeColor: "bg-teal-600 text-white"
     }] : []),
     ...(resolvedProject ? [{
-      level: "Level 3: 達成手段（プロジェクト）",
+      level: "Level 2: 達成手段（プロジェクト）",
       title: resolvedProject.title,
       icon: FolderKanban,
       color: "border-indigo-400 bg-indigo-50 text-indigo-900",
@@ -77,14 +77,14 @@ export function WhyExplanationModal({
       badgeColor: "bg-indigo-600 text-white"
     }] : []),
     ...(resolvedStory ? [{
-      level: "Level 2: 戦略的大目標（ストーリー）",
+      level: "Level 1: 大目標（メインストーリー）",
       title: resolvedStory.title,
       icon: Compass,
       color: "border-amber-400 bg-amber-50 text-amber-900",
       badgeColor: "bg-amber-600 text-white"
     }] : []),
     ...(futureVision ? [{
-      level: "Level 1: 究極の理想・目指す未来",
+      level: "🌟 補足: 目指す究極の理想 & 価値観",
       title: futureVision.content,
       icon: Sparkles,
       color: "border-purple-400 bg-purple-50 text-purple-900",

@@ -476,12 +476,12 @@ export default function QuestsPage() {
               />
             </div>
 
-            {/* Story (Level 2) & Project (Level 3) & Milestone (Level 4) Parent Selector */}
+            {/* Story (Level 1) & Project (Level 2) & Milestone (Level 3) Parent Selector */}
             <div className="p-3 bg-stone-50 rounded-2xl border border-stone-200/80 space-y-2">
               {stories.length > 0 && (
                 <div>
                   <label className="block text-[11px] font-bold text-stone-700 mb-1">
-                    所属する戦略的大目標（Level 2）
+                    所属する大目標（Level 1）
                   </label>
                   <select
                     value={newStoryId}
@@ -503,7 +503,7 @@ export default function QuestsPage() {
 
               <div>
                 <label className="block text-[10px] font-bold text-stone-500 mb-1">
-                  所属プロジェクト（Level 3 手段）
+                  所属プロジェクト（Level 2 手段）
                 </label>
                 <select
                   value={newProjectId}
@@ -525,7 +525,7 @@ export default function QuestsPage() {
               {newProjectId && (
                 <div>
                   <label className="block text-[10px] font-bold text-stone-500 mb-1">
-                    所属マイルストーン（Level 4 工程）
+                    所属マイルストーン（Level 3 工程）
                   </label>
                   <select
                     value={newMilestoneId}

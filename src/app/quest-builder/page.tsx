@@ -395,7 +395,7 @@ JSONの前後に必ず ---CRESTWARD_JSON_START--- と ---CRESTWARD_JSON_END--- �
             <div className="flex justify-between items-center mb-2 px-1">
               <label className="text-xs font-black text-stone-500 uppercase tracking-widest flex items-center gap-1.5">
                 <Crown className="w-4 h-4 text-amber-500" />
-                Level 2: 戦略的大目標（分解対象）
+                Level 1: 大目標（分解対象）
               </label>
               <button
                 onClick={() => setIsCreateStoryOpen(true)}

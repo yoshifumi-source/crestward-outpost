@@ -186,13 +186,13 @@ export default function HomePage() {
       </div>
 
       {/* ========================================================================= */}
-      {/* 🌟 LEVEL 1: ALWAYS-VISIBLE ROOT VISION BANNER (常時表示の究極の理想) */}
+      {/* 🌟 ROOT VISION BANNER (常時表示の究極の理想・価値観) */}
       {/* ========================================================================= */}
       <section className="mb-6">
         <div className="p-5 md:p-6 rounded-3xl bg-gradient-to-br from-purple-950 via-stone-900 to-indigo-950 text-white border border-purple-800/40 shadow-sm relative overflow-hidden">
           <div className="flex justify-between items-center mb-2">
             <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full bg-purple-500/30 text-purple-200 border border-purple-400/30 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-amber-300" /> Level 1: 究極の理想・価値観 (ROOT)
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" /> 補足: 目指す究極の理想 & 価値観 (ROOT)
             </span>
             <button
               onClick={() => router.push("/story")}
@@ -227,15 +227,15 @@ export default function HomePage() {
       {/* ========================================================================= */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* ========================================================================= */}
-        {/* 👑 LEFT MAIN COLUMN (Level 2 Goals & Today's Quests) */}
+        {/* 👑 LEFT MAIN COLUMN (Level 1 Goals & Today's Quests) */}
         {/* ========================================================================= */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Level 2: Multiple Concurrent Goals */}
+          {/* Level 1: Multiple Concurrent Goals */}
           <section>
             <div className="flex items-center justify-between mb-3 px-1">
               <h2 className="text-xs font-black text-stone-500 uppercase tracking-widest flex items-center gap-1.5">
                 <Crown className="w-4 h-4 text-amber-500" />
-                Level 2: 戦略的大目標（全 {stories.length} 件 進行中）
+                Level 1: 大目標（メインストーリー / 全 {stories.length} 件 進行中）
               </h2>
               <button 
                 onClick={() => router.push("/story")}
@@ -300,7 +300,7 @@ export default function HomePage() {
                         {/* Sub-projects pills */}
                         {storyProjects.length > 0 && (
                           <div className="mt-3 pt-2.5 border-t border-stone-200/60 flex items-center gap-1.5 flex-wrap">
-                            <span className="text-[10px] font-bold text-stone-400">手段:</span>
+                            <span className="text-[10px] font-bold text-stone-400">Level 2 手段:</span>
                             {storyProjects.map(p => (
                               <span key={p.id} className="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200/50 px-2 py-0.5 rounded-md">
                                 {p.title} ({p.progress}%)
@@ -321,7 +321,7 @@ export default function HomePage() {
             <div className="flex justify-between items-center mb-3 px-1">
               <h2 className="text-xs font-black text-stone-500 uppercase tracking-widest flex items-center gap-1.5">
                 <Flame className="w-4 h-4 text-amber-500" />
-                本日のクエスト（{todaysQuests.length} 件）
+                Level 4: 本日の実行クエスト（{todaysQuests.length} 件）
               </h2>
               <button
                 onClick={() => router.push("/quests")}

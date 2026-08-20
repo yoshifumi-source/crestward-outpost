@@ -127,26 +127,21 @@ export default function GuidePage() {
               </p>
               
               <div className="bg-stone-50 p-3 rounded-2xl border border-stone-200/80 space-y-2 text-xs font-bold text-stone-700 font-mono">
-                <div className="flex items-center gap-2 text-purple-700 bg-purple-50 p-2.5 rounded-xl border border-purple-200/60">
+                <div className="flex items-center gap-2 text-purple-900 bg-purple-50 p-2.5 rounded-xl border border-purple-200/60">
                   <span className="text-lg">🌟</span>
                   <div>
-                    <span className="text-[10px] text-purple-500 block font-black">Level 1: 究極の理想・価値観</span>
-                    『お金と時間に不自由しない自由な生活』
-                  </div>
-                </div>
-                <div className="text-center text-stone-400 text-xs">▼ 逆算</div>
-                <div className="flex items-center gap-2 text-emerald-800 bg-emerald-50 p-2.5 rounded-xl border border-emerald-200/60">
-                  <span className="text-lg">👑</span>
-                  <div>
-                    <span className="text-[10px] text-emerald-600 block font-black">Level 2: 戦略的大目標（メインストーリー）</span>
+                    <span className="text-[10px] text-purple-700 block font-black">Level 1: 大目標（メインストーリー）</span>
                     『副業で年収100万円アップ』
+                    <span className="text-[10px] text-purple-500 font-normal block mt-0.5">
+                      （補足・背景: お金と時間に縛られず自由に暮らす人生 / 価値観）
+                    </span>
                   </div>
                 </div>
                 <div className="text-center text-stone-400 text-xs">▼ 複数の手段に展開</div>
                 <div className="flex items-center gap-2 text-indigo-800 bg-indigo-50 p-2.5 rounded-xl border border-indigo-200/60">
                   <span className="text-lg">📱</span>
                   <div>
-                    <span className="text-[10px] text-indigo-600 block font-black">Level 3: 達成手段（プロジェクト / トラック）</span>
+                    <span className="text-[10px] text-indigo-600 block font-black">Level 2: 達成手段（プロジェクト / トラック）</span>
                     『①アプリ販売』『②社外講演』『③物品販売』
                   </div>
                 </div>
@@ -154,7 +149,7 @@ export default function GuidePage() {
                 <div className="flex items-center gap-2 text-teal-900 bg-teal-50 p-2.5 rounded-xl border border-teal-200/60">
                   <span className="text-lg">🚩</span>
                   <div>
-                    <span className="text-[10px] text-teal-700 block font-black">Level 4: 工程（マイルストーン）</span>
+                    <span className="text-[10px] text-teal-700 block font-black">Level 3: 工程（マイルストーン）</span>
                     『学習・インプット』➔『v1.0開発』➔『改善』
                   </div>
                 </div>
@@ -162,7 +157,7 @@ export default function GuidePage() {
                 <div className="flex items-center gap-2 text-amber-900 bg-amber-50 p-2.5 rounded-xl border border-amber-200/60">
                   <span className="text-lg">⚔️</span>
                   <div>
-                    <span className="text-[10px] text-amber-700 block font-black">Level 5: 実行クエスト & 数値目標</span>
+                    <span className="text-[10px] text-amber-700 block font-black">Level 4: 実行クエスト & 数値目標</span>
                     『専門書25P読了 (25/213P)』『ツール選定』
                   </div>
                 </div>

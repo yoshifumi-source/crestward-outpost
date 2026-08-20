@@ -376,72 +376,28 @@ export default function StoryPage() {
       </div>
 
       {/* ========================================================================= */}
-      {/* 🌟 LEVEL 1: ALWAYS-VISIBLE ROOT VISION & CORE VALUES (究極の理想・価値観) */}
+      {/* 🌟 LEVEL 1: STRATEGIC MAJOR GOALS & SUPPLEMENTARY ULTIMATE VISION/VALUES */}
       {/* ========================================================================= */}
-      <section className="mb-5">
-        <div className="p-4 rounded-3xl bg-gradient-to-br from-purple-950 via-stone-900 to-indigo-950 text-white border border-purple-800/40 shadow-md relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-3 opacity-10">
-            <Sparkles className="w-20 h-20 text-purple-300" />
-          </div>
-
-          <div className="flex justify-between items-center mb-2 relative z-10">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[9px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-purple-500/30 text-purple-200 border border-purple-400/30 flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-amber-300" /> Level 1: 究極の理想・価値観 (ROOT)
-              </span>
-            </div>
-            <button
-              onClick={() => setIsEditVisionOpen(true)}
-              className="text-[10px] font-bold text-purple-200 hover:text-white bg-purple-900/60 hover:bg-purple-800/80 border border-purple-500/40 px-2 py-0.5 rounded-lg flex items-center gap-1 transition-colors"
-            >
-              <Edit3 className="w-2.5 h-2.5" /> 編集
-            </button>
-          </div>
-
-          <h2 className="text-xs font-bold text-stone-100 leading-relaxed mb-3 relative z-10 font-sans">
-            {futureVision?.content || "お金と時間に縛られず、自分が誇れるプロダクトを世界に届けながら豊かに暮らす人生"}
-          </h2>
-
-          {/* Core Values Chips */}
-          {values.length > 0 && (
-            <div className="pt-2 border-t border-purple-800/50 flex items-center gap-1.5 flex-wrap relative z-10">
-              <span className="text-[9px] font-bold text-purple-300">コア価値観:</span>
-              {values.map(v => (
-                <span 
-                  key={v.id}
-                  className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-purple-900/60 text-purple-200 border border-purple-500/30 font-mono"
-                >
-                  {v.name} ★{v.level}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* ========================================================================= */}
-      {/* 👑 LEVEL 2: MULTIPLE CONCURRENT STRATEGIC GOALS (戦略的大目標セレクター) */}
-      {/* ========================================================================= */}
-      <section className="mb-5">
+      <section className="mb-6">
         <div className="flex justify-between items-center mb-2 px-1">
           <div className="flex items-center gap-1.5">
-            <Crown className="w-3.5 h-3.5 text-amber-500" />
-            <h2 className="text-[11px] font-black text-stone-500 uppercase tracking-widest">
-              Level 2: 戦略的大目標（全 {stories.length} 件 進行中）
+            <Crown className="w-4 h-4 text-amber-500" />
+            <h2 className="text-xs md:text-sm font-black text-stone-800 uppercase tracking-wider">
+              Level 1: 🌟 大目標（メインストーリー / 全 {stories.length} 件 進行中）
             </h2>
           </div>
           <button
             onClick={() => setIsCreateStoryOpen(true)}
-            className="text-[11px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 px-2.5 py-1 rounded-full flex items-center gap-1 transition-colors shadow-2xs"
+            className="text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 px-3 py-1 rounded-full flex items-center gap-1 transition-colors shadow-2xs"
           >
-            <Plus className="w-3 h-3" /> 大目標を追加
+            <Plus className="w-3.5 h-3.5" /> 大目標を追加
           </button>
         </div>
 
-        {/* Level 2 Goal Switcher Tabs */}
+        {/* Level 1 Goal Switcher & Details Card */}
         {stories.length === 0 ? (
-          <div className="p-5 rounded-3xl bg-white border border-dashed border-stone-300 text-center">
-            <Target className="w-8 h-8 text-stone-300 mx-auto mb-2" />
+          <div className="p-6 rounded-3xl bg-white border border-dashed border-stone-300 text-center shadow-sm">
+            <Target className="w-10 h-10 text-stone-300 mx-auto mb-2" />
             <h3 className="font-bold text-sm text-stone-700">大目標がありません</h3>
             <p className="text-xs text-stone-500 my-2">「副業年収100万」や「専門書読破」など、達成したい目標を作成しましょう。</p>
             <Button
@@ -454,22 +410,22 @@ export default function StoryPage() {
         ) : (
           <div className="space-y-3">
             {/* Multiple Goals Selection Pills */}
-            <div className="flex gap-1.5 overflow-x-auto pb-1">
+            <div className="flex gap-2 overflow-x-auto pb-1">
               {stories.map(s => {
                 const isSelected = s.id === (activeStory?.id || "");
                 return (
                   <button
                     key={s.id}
                     onClick={() => setSelectedStoryId(s.id)}
-                    className={`px-3 py-2 rounded-2xl text-xs font-bold shrink-0 transition-all flex items-center gap-2 border ${
+                    className={`px-3.5 py-2 rounded-2xl text-xs font-bold shrink-0 transition-all flex items-center gap-2 border ${
                       isSelected
                         ? "bg-stone-900 text-white border-stone-900 shadow-sm"
                         : "bg-white text-stone-700 border-stone-200 hover:bg-stone-50"
                     }`}
                   >
-                    <Crown className={`w-3 h-3 ${isSelected ? "text-amber-400" : "text-stone-400"}`} />
+                    <Crown className={`w-3.5 h-3.5 ${isSelected ? "text-amber-400" : "text-stone-400"}`} />
                     <span>{s.title}</span>
-                    <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded ${
+                    <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full ${
                       isSelected ? "bg-stone-800 text-emerald-400" : "bg-stone-100 text-emerald-700"
                     }`}>
                       {s.progress}%
@@ -479,43 +435,80 @@ export default function StoryPage() {
               })}
             </div>
 
-            {/* Active Selected Story Card */}
+            {/* Active Selected Story Card with Supplementary Vision/Values */}
             {activeStory && (
-              <div className="glass-panel p-4 rounded-3xl border border-stone-200/90 shadow-sm bg-gradient-to-br from-white to-stone-50/70 relative">
-                <div className="flex justify-between items-start mb-1.5">
-                  <span className="text-[9px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
-                    <Crown className="w-2.5 h-2.5 text-amber-500" /> 選択中の大目標
-                  </span>
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => setIsPivotDialogOpen(true)}
-                      className="text-[10px] font-bold text-stone-500 hover:text-purple-700 bg-white border border-stone-200 px-2 py-0.5 rounded-md hover:bg-purple-50 transition-colors shadow-2xs"
-                    >
-                      <GitBranch className="w-2.5 h-2.5 inline mr-0.5" /> ピボット
-                    </button>
-                    <button
-                      onClick={() => handleDeleteStory(activeStory.id)}
-                      className="p-1 text-stone-400 hover:text-rose-600 rounded"
-                      title="この大目標を削除"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
+              <div className="glass-panel p-5 md:p-6 rounded-3xl border border-stone-200/90 shadow-sm bg-gradient-to-br from-white to-stone-50/70 relative space-y-4">
+                {/* Main Goal Details */}
+                <div>
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-100 border border-emerald-200/60 px-2.5 py-0.5 rounded-full inline-flex items-center gap-1">
+                      <Crown className="w-3 h-3 text-amber-500" /> 選択中の大目標（Level 1）
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setIsPivotDialogOpen(true)}
+                        className="text-xs font-bold text-stone-500 hover:text-purple-700 bg-white border border-stone-200 px-2.5 py-1 rounded-lg hover:bg-purple-50 transition-colors shadow-2xs"
+                      >
+                        <GitBranch className="w-3 h-3 inline mr-1" /> ピボット
+                      </button>
+                      <button
+                        onClick={() => handleDeleteStory(activeStory.id)}
+                        className="p-1 text-stone-400 hover:text-rose-600 rounded"
+                        title="この大目標を削除"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <h3 className="font-black text-base md:text-lg text-stone-900 leading-snug mb-1">
+                    {activeStory.title}
+                  </h3>
+                  <p className="text-xs md:text-sm font-medium text-stone-500 mb-3 leading-relaxed">
+                    {activeStory.description}
+                  </p>
+
+                  <div className="bg-white p-3 rounded-2xl border border-stone-200/80 shadow-inner">
+                    <div className="flex justify-between text-xs font-bold text-stone-600 mb-1">
+                      <span>大目標の統合達成度</span>
+                      <span className="font-mono text-emerald-700 font-black text-sm">{activeStory.progress}%</span>
+                    </div>
+                    <Progress value={activeStory.progress} className="h-2 bg-stone-100 *:bg-emerald-600" />
                   </div>
                 </div>
 
-                <h3 className="font-black text-sm text-stone-900 leading-snug mb-1">
-                  {activeStory.title}
-                </h3>
-                <p className="text-xs font-medium text-stone-500 mb-3 leading-relaxed">
-                  {activeStory.description}
-                </p>
-
-                <div className="bg-white p-3 rounded-2xl border border-stone-200/80 shadow-inner">
-                  <div className="flex justify-between text-xs font-bold text-stone-600 mb-1">
-                    <span>この目標の統合達成度</span>
-                    <span className="font-mono text-emerald-700 font-black">{activeStory.progress}%</span>
+                {/* Supplementary: Ultimate Ideal & Values (大目標の補足・背景) */}
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-950 via-stone-900 to-indigo-950 text-white border border-purple-800/40 shadow-sm relative overflow-hidden">
+                  <div className="flex justify-between items-center mb-1.5">
+                    <span className="text-[9px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-purple-500/30 text-purple-200 border border-purple-400/30 flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 text-amber-300" /> 補足: 目指す究極の理想 & 価値観
+                    </span>
+                    <button
+                      onClick={() => setIsEditVisionOpen(true)}
+                      className="text-[10px] font-bold text-purple-200 hover:text-white bg-purple-900/60 hover:bg-purple-800/80 border border-purple-500/40 px-2 py-0.5 rounded-lg flex items-center gap-1 transition-colors"
+                    >
+                      <Edit3 className="w-2.5 h-2.5" /> 編集
+                    </button>
                   </div>
-                  <Progress value={activeStory.progress} className="h-2 bg-stone-100 *:bg-emerald-600" />
+
+                  <p className="text-xs font-bold text-stone-100 leading-relaxed mb-2 font-sans">
+                    {futureVision?.content || "お金と時間に縛られず、自分が誇れるプロダクトを世界に届けながら豊かに暮らす人生"}
+                  </p>
+
+                  {/* Core Values Chips */}
+                  {values.length > 0 && (
+                    <div className="pt-2 border-t border-purple-800/50 flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[9px] font-bold text-purple-300">コア価値観:</span>
+                      {values.map(v => (
+                        <span 
+                          key={v.id}
+                          className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-purple-900/60 text-purple-200 border border-purple-500/30 font-mono"
+                        >
+                          {v.name} ★{v.level}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -524,20 +517,20 @@ export default function StoryPage() {
       </section>
 
       {/* ========================================================================= */}
-      {/* 📱 LEVEL 3: MEANS / TRACKS (PROJECTS UNDER ACTIVE STORY) */}
+      {/* 📱 LEVEL 2: MEANS / TRACKS (PROJECTS UNDER ACTIVE STORY) */}
       {/* ========================================================================= */}
       {activeStory && (
-        <section className="mb-5">
-          <div className="flex justify-between items-center mb-2 px-1">
-            <h3 className="text-[11px] font-black text-stone-500 uppercase tracking-widest flex items-center gap-1.5">
-              <FolderKanban className="w-3.5 h-3.5 text-indigo-600" />
-              Level 3: 達成手段（プロジェクト / トラック）
+        <section className="mb-6">
+          <div className="flex justify-between items-center mb-3 px-1">
+            <h3 className="text-xs font-black text-stone-500 uppercase tracking-widest flex items-center gap-1.5">
+              <FolderKanban className="w-4 h-4 text-indigo-600" />
+              Level 2: 達成手段（プロジェクト / トラック）
             </h3>
             <button
               onClick={() => setIsAddProjectOpen(true)}
-              className="text-[11px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/80 px-2.5 py-1 rounded-full flex items-center gap-1 transition-colors shadow-2xs"
+              className="text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/80 px-3 py-1 rounded-full flex items-center gap-1 transition-colors shadow-2xs"
             >
-              <Plus className="w-3 h-3" /> 手段を追加
+              <Plus className="w-3.5 h-3.5" /> 手段を追加
             </button>
           </div>
 
@@ -576,7 +569,7 @@ export default function StoryPage() {
           )}
 
           {/* ========================================================================= */}
-          {/* 🚩 LEVEL 4 & ⚔️ LEVEL 5: HIERARCHY TREE */}
+          {/* 🚩 LEVEL 3 & ⚔️ LEVEL 4: HIERARCHY TREE */}
           {/* ========================================================================= */}
           <div className="space-y-4">
             {displayedProjects.length === 0 ? (
@@ -607,7 +600,7 @@ export default function StoryPage() {
                     <div className="flex justify-between items-start mb-2">
                       <div>
                         <span className="text-[9px] font-black uppercase tracking-wider text-indigo-700 bg-indigo-50 border border-indigo-200/60 px-2 py-0.5 rounded-full inline-block mb-1">
-                          手段・トラック
+                          Level 2: 手段・トラック
                         </span>
                         <h4 className="font-black text-sm text-stone-900 leading-snug">
                           {project.title}
@@ -649,12 +642,12 @@ export default function StoryPage() {
                       <Progress value={project.progress} className="h-1.5 bg-stone-200/50 *:bg-indigo-600" />
                     </div>
 
-                    {/* Level 4: Milestones Tree */}
+                    {/* Level 3: Milestones Tree */}
                     <div className="space-y-3 pt-1">
                       {projectMilestones.length === 0 ? (
                         <div className="p-3 rounded-xl bg-stone-50/70 border border-dashed border-stone-200 text-center">
                           <p className="text-[11px] text-stone-400 font-bold mb-2">
-                            工程（マイルストーン）がありません。
+                            工程（Level 3 マイルストーン）がありません。
                           </p>
                           <button
                             onClick={() => {
@@ -678,6 +671,9 @@ export default function StoryPage() {
                                 <div className="flex items-center gap-1.5">
                                   <span className="w-4 h-4 rounded-md bg-stone-200 text-stone-700 text-[10px] font-black flex items-center justify-center">
                                     {msIdx + 1}
+                                  </span>
+                                  <span className="text-[10px] font-black text-teal-700 bg-teal-50 border border-teal-200/60 px-1.5 py-0.2 rounded">
+                                    Level 3 工程
                                   </span>
                                   <h5 className="font-black text-xs text-stone-800">
                                     {ms.title}
@@ -707,7 +703,7 @@ export default function StoryPage() {
                                 </div>
                               </div>
 
-                              {/* Level 5: Quests List inside Milestone */}
+                              {/* Level 4: Quests List inside Milestone */}
                               <div className="space-y-1.5 mt-2">
                                 {msQuests.map((q) => {
                                   const isComp = q.status === "completed";
