@@ -235,7 +235,7 @@ export default function HomePage() {
             <div className="flex items-center justify-between mb-3 px-1">
               <h2 className="text-xs font-black text-stone-500 uppercase tracking-widest flex items-center gap-1.5">
                 <Crown className="w-4 h-4 text-amber-500" />
-                Level 2: 進行中の大目標（全 {stories.length} 件）
+                Level 2: 戦略的大目標（全 {stories.length} 件 進行中）
               </h2>
               <button 
                 onClick={() => router.push("/story")}

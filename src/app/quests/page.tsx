@@ -481,7 +481,7 @@ export default function QuestsPage() {
               {stories.length > 0 && (
                 <div>
                   <label className="block text-[11px] font-bold text-stone-700 mb-1">
-                    所属する大目標（Level 2）
+                    所属する戦略的大目標（Level 2）
                   </label>
                   <select
                     value={newStoryId}
