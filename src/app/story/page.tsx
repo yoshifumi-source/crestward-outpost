@@ -80,15 +80,31 @@ export default function StoryPage() {
   const [newStoryTitle, setNewStoryTitle] = useState("");
   const [newStoryDesc, setNewStoryDesc] = useState("");
 
+  // Edit Story Dialog
+  const [isEditStoryOpen, setIsEditStoryOpen] = useState(false);
+  const [editStoryTitle, setEditStoryTitle] = useState("");
+  const [editStoryDesc, setEditStoryDesc] = useState("");
+
   // Add Project Dialog
   const [isAddProjectOpen, setIsAddProjectOpen] = useState(false);
   const [newProjectTitle, setNewProjectTitle] = useState("");
   const [newProjectDesc, setNewProjectDesc] = useState("");
 
+  // Edit Project Dialog
+  const [isEditProjectOpen, setIsEditProjectOpen] = useState(false);
+  const [editProject, setEditProject] = useState<GoalProject | null>(null);
+  const [editProjectTitle, setEditProjectTitle] = useState("");
+  const [editProjectDesc, setEditProjectDesc] = useState("");
+
   // Add Milestone Dialog
   const [isAddMilestoneOpen, setIsAddMilestoneOpen] = useState(false);
   const [targetProjectId, setTargetProjectId] = useState<string>("");
   const [newMilestoneTitle, setNewMilestoneTitle] = useState("");
+
+  // Edit Milestone Dialog
+  const [isEditMilestoneOpen, setIsEditMilestoneOpen] = useState(false);
+  const [editMilestone, setEditMilestone] = useState<Milestone | null>(null);
+  const [editMilestoneTitle, setEditMilestoneTitle] = useState("");
 
   // Add Quest to Milestone Dialog
   const [isAddQuestOpen, setIsAddQuestOpen] = useState(false);
@@ -100,6 +116,17 @@ export default function StoryPage() {
   const [hasMetric, setHasMetric] = useState(false);
   const [metricTarget, setMetricTarget] = useState("");
   const [metricUnit, setMetricUnit] = useState("回");
+
+  // Edit Quest Dialog
+  const [isEditQuestOpen, setIsEditQuestOpen] = useState(false);
+  const [editQuest, setEditQuest] = useState<Quest | null>(null);
+  const [editQuestTitle, setEditQuestTitle] = useState("");
+  const [editQuestDesc, setEditQuestDesc] = useState("");
+  const [editQuestDiff, setEditQuestDiff] = useState<QuestDifficulty>("easy");
+  const [editHasMetric, setEditHasMetric] = useState(false);
+  const [editMetricTarget, setEditMetricTarget] = useState("");
+  const [editMetricCurrent, setEditMetricCurrent] = useState("");
+  const [editMetricUnit, setEditMetricUnit] = useState("回");
 
   // Metric Progress & WHY Modals
   const [progressQuest, setProgressQuest] = useState<Quest | null>(null);
@@ -192,11 +219,49 @@ export default function StoryPage() {
     loadData();
   };
 
+  const handleOpenEditStory = (story: MainStory) => {
+    setEditStoryTitle(story.title);
+    setEditStoryDesc(story.description);
+    setIsEditStoryOpen(true);
+  };
+
+  const handleSaveEditStory = () => {
+    if (!activeStory || !editStoryTitle.trim()) return;
+    const updated: MainStory = {
+      ...activeStory,
+      title: editStoryTitle.trim(),
+      description: editStoryDesc.trim() || "自己成長と目標の実現を目指す"
+    };
+    storage.updateStory(updated);
+    setIsEditStoryOpen(false);
+    loadData();
+  };
+
   const handleDeleteStory = (storyId: string) => {
     if (confirm("この大目標を削除しますか？紐付くすべての手段・工程・クエストも削除されます。")) {
       storage.deleteStory(storyId);
       loadData();
     }
+  };
+
+  const handleOpenEditProject = (proj: GoalProject) => {
+    setEditProject(proj);
+    setEditProjectTitle(proj.title);
+    setEditProjectDesc(proj.description || "");
+    setIsEditProjectOpen(true);
+  };
+
+  const handleSaveEditProject = () => {
+    if (!editProject || !editProjectTitle.trim()) return;
+    const updated: GoalProject = {
+      ...editProject,
+      title: editProjectTitle.trim(),
+      description: editProjectDesc.trim() || undefined
+    };
+    storage.updateProject(updated);
+    setIsEditProjectOpen(false);
+    setEditProject(null);
+    loadData();
   };
 
   const handleAddProject = () => {
@@ -247,6 +312,24 @@ export default function StoryPage() {
     loadData();
   };
 
+  const handleOpenEditMilestone = (ms: Milestone) => {
+    setEditMilestone(ms);
+    setEditMilestoneTitle(ms.title);
+    setIsEditMilestoneOpen(true);
+  };
+
+  const handleSaveEditMilestone = () => {
+    if (!editMilestone || !editMilestoneTitle.trim()) return;
+    const updated: Milestone = {
+      ...editMilestone,
+      title: editMilestoneTitle.trim()
+    };
+    storage.updateMilestone(updated);
+    setIsEditMilestoneOpen(false);
+    setEditMilestone(null);
+    loadData();
+  };
+
   const handleDeleteMilestone = (msId: string) => {
     if (confirm("この工程（マイルストーン）を削除しますか？紐付くクエストも削除されます。")) {
       const allMs = storage.getMilestones().filter(m => m.id !== msId);
@@ -258,6 +341,54 @@ export default function StoryPage() {
       }
       loadData();
     }
+  };
+
+  const handleOpenEditQuest = (q: Quest) => {
+    setEditQuest(q);
+    setEditQuestTitle(q.title);
+    setEditQuestDesc(q.description || "");
+    setEditQuestDiff(q.difficulty || "easy");
+    if (q.metric) {
+      setEditHasMetric(true);
+      setEditMetricTarget(String(q.metric.targetValue));
+      setEditMetricCurrent(String(q.metric.currentValue || 0));
+      setEditMetricUnit(q.metric.unit || "回");
+    } else {
+      setEditHasMetric(false);
+      setEditMetricTarget("");
+      setEditMetricCurrent("0");
+      setEditMetricUnit("回");
+    }
+    setIsEditQuestOpen(true);
+  };
+
+  const handleSaveEditQuest = () => {
+    if (!editQuest || !editQuestTitle.trim()) return;
+    const metricObj: QuestMetric | undefined = editHasMetric && Number(editMetricTarget) > 0 ? {
+      targetValue: Number(editMetricTarget),
+      currentValue: Number(editMetricCurrent) || 0,
+      unit: editMetricUnit.trim() || "回",
+      history: editQuest.metric?.history || []
+    } : undefined;
+
+    const mpMap: Record<QuestDifficulty, number> = { easy: 1, normal: 2, hard: 3, very_hard: 4 };
+    const xpMap: Record<QuestDifficulty, number> = { easy: 15, normal: 30, hard: 60, very_hard: 100 };
+    const goldMap: Record<QuestDifficulty, number> = { easy: 5, normal: 10, hard: 25, very_hard: 40 };
+
+    const updated: Quest = {
+      ...editQuest,
+      title: editQuestTitle.trim(),
+      description: editQuestDesc.trim(),
+      difficulty: editQuestDiff,
+      mpCost: mpMap[editQuestDiff] || 2,
+      xpReward: xpMap[editQuestDiff] || 30,
+      goldReward: goldMap[editQuestDiff] || 10,
+      metric: metricObj
+    };
+    storage.updateQuest(updated);
+    setIsEditQuestOpen(false);
+    setEditQuest(null);
+    loadData();
   };
 
   const handleAddQuestToMilestone = () => {
@@ -446,6 +577,13 @@ export default function StoryPage() {
                     </span>
                     <div className="flex items-center gap-1">
                       <button
+                        onClick={() => handleOpenEditStory(activeStory)}
+                        className="text-xs font-bold text-stone-600 hover:text-stone-900 bg-white border border-stone-200 px-2.5 py-1 rounded-lg hover:bg-stone-50 transition-colors shadow-2xs flex items-center gap-1"
+                        title="この大目標を編集"
+                      >
+                        <Edit3 className="w-3 h-3 text-stone-500" /> 編集
+                      </button>
+                      <button
                         onClick={() => setIsPivotDialogOpen(true)}
                         className="text-xs font-bold text-stone-500 hover:text-purple-700 bg-white border border-stone-200 px-2.5 py-1 rounded-lg hover:bg-purple-50 transition-colors shadow-2xs"
                       >
@@ -608,6 +746,13 @@ export default function StoryPage() {
                       </div>
                       <div className="flex items-center gap-1">
                         <button
+                          onClick={() => handleOpenEditProject(project)}
+                          className="p-1 text-stone-400 hover:text-stone-700 rounded-md hover:bg-stone-100"
+                          title="この達成手段を編集"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
                           onClick={() => {
                             setTargetProjectId(project.id);
                             setIsAddMilestoneOpen(true);
@@ -685,6 +830,13 @@ export default function StoryPage() {
 
                                 <div className="flex items-center gap-1">
                                   <button
+                                    onClick={() => handleOpenEditMilestone(ms)}
+                                    className="p-0.5 text-stone-400 hover:text-stone-700 rounded"
+                                    title="工程を編集"
+                                  >
+                                    <Edit3 className="w-3 h-3" />
+                                  </button>
+                                  <button
                                     onClick={() => {
                                       setTargetProjectIdForQuest(project.id);
                                       setTargetMilestoneId(ms.id);
@@ -722,7 +874,7 @@ export default function StoryPage() {
                                       <div className="flex justify-between items-start gap-2">
                                         <div className="flex items-start gap-1.5 flex-1">
                                           {isComp ? (
-                                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
                                           ) : (
                                             <Circle className="w-3.5 h-3.5 text-stone-400 shrink-0 mt-0.5" />
                                           )}
@@ -739,6 +891,13 @@ export default function StoryPage() {
                                         </div>
 
                                         <div className="flex items-center gap-1 shrink-0">
+                                          <button
+                                            onClick={() => handleOpenEditQuest(q)}
+                                            className="p-1 text-stone-400 hover:text-stone-700 rounded hover:bg-stone-50"
+                                            title="クエストを編集"
+                                          >
+                                            <Edit3 className="w-3 h-3" />
+                                          </button>
                                           <button
                                             onClick={() => setWhyQuest(q)}
                                             className="p-1 text-stone-400 hover:text-amber-700 rounded hover:bg-stone-50"
@@ -1193,6 +1352,287 @@ export default function StoryPage() {
               onClick={() => setIsPivotDialogOpen(false)}
               variant="ghost"
               className="w-full text-stone-500 text-xs font-bold"
+            >
+              キャンセル
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Story Dialog */}
+      <Dialog open={isEditStoryOpen} onOpenChange={setIsEditStoryOpen}>
+        <DialogContent className="max-w-xs mx-auto rounded-3xl p-6 bg-white/95 backdrop-blur-xl border border-stone-100 shadow-2xl">
+          <DialogHeader className="text-center">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-200 mx-auto flex items-center justify-center mb-2 shadow-sm">
+              <Edit3 className="w-6 h-6 text-emerald-600" />
+            </div>
+            <DialogTitle className="text-lg font-black text-stone-800">
+              大目標（Level 1）を編集
+            </DialogTitle>
+            <DialogDescription className="text-xs font-medium text-stone-500">
+              目標のタイトルや詳細を変更します。
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2 text-left">
+            <div>
+              <label className="block text-xs font-bold text-stone-700 mb-1">目標タイトル</label>
+              <Input
+                value={editStoryTitle}
+                onChange={(e) => setEditStoryTitle(e.target.value)}
+                placeholder="例: お金に不自由しない生活（副業100万）"
+                className="text-xs rounded-xl font-bold"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-stone-700 mb-1">理由・目指す情景</label>
+              <Textarea
+                value={editStoryDesc}
+                onChange={(e) => setEditStoryDesc(e.target.value)}
+                placeholder="例: 経済的自立と自由な時間の獲得"
+                className="text-xs min-h-[80px] resize-none rounded-xl"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="flex flex-col gap-2 mt-2">
+            <Button
+              onClick={handleSaveEditStory}
+              disabled={!editStoryTitle.trim()}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl py-5 font-bold text-xs shadow-md"
+            >
+              保存する
+            </Button>
+            <Button
+              onClick={() => setIsEditStoryOpen(false)}
+              variant="ghost"
+              className="w-full text-stone-400 text-xs font-bold"
+            >
+              キャンセル
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Project Dialog */}
+      <Dialog open={isEditProjectOpen} onOpenChange={setIsEditProjectOpen}>
+        <DialogContent className="max-w-xs mx-auto rounded-3xl p-6 bg-white/95 backdrop-blur-xl border border-stone-100 shadow-2xl">
+          <DialogHeader className="text-center">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 border border-indigo-200 mx-auto flex items-center justify-center mb-2 shadow-sm">
+              <Edit3 className="w-6 h-6 text-indigo-600" />
+            </div>
+            <DialogTitle className="text-lg font-black text-stone-800">
+              達成手段（Level 2）を編集
+            </DialogTitle>
+            <DialogDescription className="text-xs font-medium text-stone-500">
+              手段・プロジェクトの内容を変更します。
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2 text-left">
+            <div>
+              <label className="block text-xs font-bold text-stone-700 mb-1">手段・プロジェクト名</label>
+              <Input
+                value={editProjectTitle}
+                onChange={(e) => setEditProjectTitle(e.target.value)}
+                placeholder="例: 📱 自作アプリの販売・リリース"
+                className="text-xs rounded-xl font-bold"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-stone-700 mb-1">説明 (任意)</label>
+              <Textarea
+                value={editProjectDesc}
+                onChange={(e) => setEditProjectDesc(e.target.value)}
+                placeholder="例: Web/スマホアプリを開発・公開し、ストック収益を作る"
+                className="text-xs min-h-[60px] resize-none rounded-xl"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="flex flex-col gap-2 mt-2">
+            <Button
+              onClick={handleSaveEditProject}
+              disabled={!editProjectTitle.trim()}
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl py-5 font-bold text-xs shadow-md"
+            >
+              保存する
+            </Button>
+            <Button
+              onClick={() => setIsEditProjectOpen(false)}
+              variant="ghost"
+              className="w-full text-stone-400 text-xs font-bold"
+            >
+              キャンセル
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Milestone Dialog */}
+      <Dialog open={isEditMilestoneOpen} onOpenChange={setIsEditMilestoneOpen}>
+        <DialogContent className="max-w-xs mx-auto rounded-3xl p-6 bg-white/95 backdrop-blur-xl border border-stone-100 shadow-2xl">
+          <DialogHeader className="text-center">
+            <DialogTitle className="text-base font-black text-stone-800">
+              工程（Level 3 マイルストーン）を編集
+            </DialogTitle>
+            <DialogDescription className="text-xs font-medium text-stone-500">
+              工程のタイトルを変更します。
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-2 text-left space-y-2">
+            <div>
+              <label className="block text-xs font-bold text-stone-700 mb-1">マイルストーン名</label>
+              <Input
+                value={editMilestoneTitle}
+                onChange={(e) => setEditMilestoneTitle(e.target.value)}
+                placeholder="例: ① 開発のための学習・インプット"
+                className="text-xs rounded-xl font-bold"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="flex flex-col gap-2 mt-2">
+            <Button
+              onClick={handleSaveEditMilestone}
+              disabled={!editMilestoneTitle.trim()}
+              className="w-full bg-teal-700 hover:bg-teal-800 text-white rounded-2xl py-5 font-bold text-xs shadow-md"
+            >
+              保存する
+            </Button>
+            <Button
+              onClick={() => setIsEditMilestoneOpen(false)}
+              variant="ghost"
+              className="w-full text-stone-400 text-xs font-bold"
+            >
+              キャンセル
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Quest Dialog */}
+      <Dialog open={isEditQuestOpen} onOpenChange={setIsEditQuestOpen}>
+        <DialogContent className="max-w-xs mx-auto rounded-3xl p-6 bg-white/95 backdrop-blur-xl border border-stone-100 shadow-2xl">
+          <DialogHeader className="text-center">
+            <DialogTitle className="text-base font-black text-stone-800">
+              クエスト（Level 4）を編集
+            </DialogTitle>
+            <DialogDescription className="text-xs font-medium text-stone-500">
+              クエストの内容や数値目標を変更します。
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2 text-left max-h-[60vh] overflow-y-auto pr-1">
+            <div>
+              <label className="block text-xs font-bold text-stone-700 mb-1">クエストタイトル</label>
+              <Input
+                value={editQuestTitle}
+                onChange={(e) => setEditQuestTitle(e.target.value)}
+                placeholder="例: 専門書テキストを探して購入する"
+                className="text-xs rounded-xl font-bold"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-stone-700 mb-1">補足説明 (任意)</label>
+              <Textarea
+                value={editQuestDesc}
+                onChange={(e) => setEditQuestDesc(e.target.value)}
+                placeholder="例: 所要時間10分。評判の良い本を1冊選ぶ。"
+                className="text-xs min-h-[50px] resize-none rounded-xl"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-stone-700 mb-1">難易度・MP</label>
+              <div className="grid grid-cols-3 gap-1.5">
+                {[
+                  { key: "easy", label: "初級 (MP1)" },
+                  { key: "normal", label: "中級 (MP2)" },
+                  { key: "hard", label: "上級 (MP3)" }
+                ].map((d) => (
+                  <button
+                    key={d.key}
+                    type="button"
+                    onClick={() => setEditQuestDiff(d.key as QuestDifficulty)}
+                    className={`py-1.5 text-[11px] font-bold rounded-xl border transition-all ${
+                      editQuestDiff === d.key 
+                        ? "bg-stone-900 text-white border-stone-900" 
+                        : "bg-stone-50 text-stone-600 border-stone-200"
+                    }`}
+                  >
+                    {d.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Numeric Metric Switch */}
+            <div className="p-3 bg-stone-50 rounded-2xl border border-stone-200/80">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-stone-800">
+                  数値到達度を記録する
+                </label>
+                <input
+                  type="checkbox"
+                  checked={editHasMetric}
+                  onChange={(e) => setEditHasMetric(e.target.checked)}
+                  className="w-4 h-4 accent-emerald-600"
+                />
+              </div>
+
+              {editHasMetric && (
+                <div className="space-y-2 mt-2 pt-2 border-t border-stone-200/60">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[10px] font-bold text-stone-600 mb-0.5">目標数値</label>
+                      <Input
+                        type="number"
+                        value={editMetricTarget}
+                        onChange={(e) => setEditMetricTarget(e.target.value)}
+                        placeholder="例: 213"
+                        className="text-xs rounded-xl"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-stone-600 mb-0.5">単位</label>
+                      <Input
+                        value={editMetricUnit}
+                        onChange={(e) => setEditMetricUnit(e.target.value)}
+                        placeholder="ページ / 円"
+                        className="text-xs rounded-xl"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-stone-600 mb-0.5">現在の累計数値</label>
+                    <Input
+                      type="number"
+                      value={editMetricCurrent}
+                      onChange={(e) => setEditMetricCurrent(e.target.value)}
+                      placeholder="例: 0"
+                      className="text-xs rounded-xl"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter className="flex flex-col gap-2 mt-2">
+            <Button
+              onClick={handleSaveEditQuest}
+              disabled={!editQuestTitle.trim()}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl py-5 font-bold text-xs shadow-md"
+            >
+              保存する
+            </Button>
+            <Button
+              onClick={() => setIsEditQuestOpen(false)}
+              variant="ghost"
+              className="w-full text-stone-400 text-xs font-bold"
             >
               キャンセル
             </Button>

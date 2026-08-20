@@ -117,6 +117,12 @@ export const storage = {
     const stories = storage.getStories();
     storage.saveStories([story, ...stories]);
   },
+  updateStory: (updatedStory: MainStory) => {
+    const stories = storage.getStories();
+    const nextStories = stories.map(s => s.id === updatedStory.id ? { ...updatedStory, updatedAt: Date.now() } : s);
+    storage.saveStories(nextStories);
+    storage.recalculateStoryProgress(updatedStory.id);
+  },
   deleteStory: (storyId: string) => {
     const stories = storage.getStories().filter(s => s.id !== storyId);
     storage.saveStories(stories);
@@ -128,13 +134,19 @@ export const storage = {
     storage.saveQuests(quests);
   },
 
-  // Level 3: Means / Tracks (Projects under Story)
+  // Level 2: Means / Tracks (Projects under Story)
   getProjects: () => get<GoalProject[]>("goal_projects", []),
   saveProjects: (projects: GoalProject[]) => set("goal_projects", projects),
   addProject: (project: GoalProject) => {
     const current = storage.getProjects();
     storage.saveProjects([...current, project]);
     storage.recalculateStoryProgress(project.storyId);
+  },
+  updateProject: (updatedProject: GoalProject) => {
+    const projects = storage.getProjects();
+    const nextProjects = projects.map(p => p.id === updatedProject.id ? updatedProject : p);
+    storage.saveProjects(nextProjects);
+    storage.recalculateStoryProgress(updatedProject.storyId);
   },
   deleteProject: (projectId: string) => {
     const projects = storage.getProjects();
@@ -152,12 +164,20 @@ export const storage = {
     }
   },
 
-  // Level 5: Quests & Metrics
+  // Level 4: Quests & Metrics
   getQuests: () => get<Quest[]>("quests", []),
   saveQuests: (quests: Quest[]) => {
     set("quests", quests);
     const stories = storage.getActiveStories();
     stories.forEach(s => storage.recalculateStoryProgress(s.id));
+  },
+  updateQuest: (updatedQuest: Quest) => {
+    const quests = storage.getQuests();
+    const nextQuests = quests.map(q => q.id === updatedQuest.id ? updatedQuest : q);
+    storage.saveQuests(nextQuests);
+    if (updatedQuest.storyId) {
+      storage.recalculateStoryProgress(updatedQuest.storyId);
+    }
   },
   deleteQuest: (questId: string) => {
     const quests = storage.getQuests();
@@ -335,6 +355,21 @@ export const storage = {
   
   getMilestones: () => get<Milestone[]>("quest_milestones", []),
   saveMilestones: (milestones: Milestone[]) => set("quest_milestones", milestones),
+  addMilestone: (milestone: Milestone) => {
+    const milestones = storage.getMilestones();
+    storage.saveMilestones([...milestones, milestone]);
+  },
+  updateMilestone: (updatedMilestone: Milestone) => {
+    const milestones = storage.getMilestones();
+    const nextMilestones = milestones.map(m => m.id === updatedMilestone.id ? updatedMilestone : m);
+    storage.saveMilestones(nextMilestones);
+  },
+  deleteMilestone: (milestoneId: string) => {
+    const milestones = storage.getMilestones().filter(m => m.id !== milestoneId);
+    storage.saveMilestones(milestones);
+    const quests = storage.getQuests().filter(q => q.milestoneId !== milestoneId);
+    storage.saveQuests(quests);
+  },
 
   // Preset Seeder (Multi-Goal & Multi-Tier Setup)
   loadSamplePreset: () => {
