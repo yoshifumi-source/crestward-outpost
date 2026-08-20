@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import { BottomNav } from "@/components/BottomNav";
+import { NavigationShell } from "@/components/NavigationShell";
 
 export const metadata: Metadata = {
   title: "Crestward — Life Navigation RPG",
@@ -27,9 +27,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja">
-      <body className="bg-stone-50 text-stone-900 min-h-screen pb-20">
-        {children}
-        <BottomNav />
+      <body className="bg-stone-50 text-stone-900 min-h-screen">
+        <NavigationShell>
+          {children}
+        </NavigationShell>
       </body>
     </html>
   );

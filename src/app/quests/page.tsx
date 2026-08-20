@@ -190,10 +190,10 @@ export default function QuestsPage() {
   });
 
   return (
-    <main className="flex flex-col min-h-screen p-4 pb-28 mx-auto max-w-md">
+    <main className="w-full max-w-6xl mx-auto p-4 md:p-8 pb-28 md:pb-12">
       {/* Header */}
-      <header className="mb-4 pt-1">
-        <div className="flex items-center justify-between mb-3 px-1">
+      <header className="mb-6 pt-1">
+        <div className="flex md:hidden items-center justify-between mb-3 px-1">
           <Link href="/" className="inline-flex items-center text-stone-400 hover:text-stone-700 text-xs font-bold transition-colors">
             <ArrowLeft className="w-4 h-4 mr-1" /> ホームに戻る
           </Link>
@@ -207,28 +207,28 @@ export default function QuestsPage() {
         </div>
 
         <div className="flex items-center justify-between mb-2 px-1">
-          <div className="flex items-center gap-1.5">
-            <Target className="w-5 h-5 text-emerald-600" />
-            <h1 className="text-xl font-black text-stone-800 tracking-tight">
+          <div className="flex items-center gap-2">
+            <Target className="w-6 h-6 text-emerald-600" />
+            <h1 className="text-xl md:text-2xl font-black text-stone-800 tracking-tight">
               クエスト掲示板
             </h1>
           </div>
           <Button
             onClick={() => setIsAddModalOpen(true)}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-full py-1.5 px-3.5 text-xs font-bold shadow-sm flex items-center gap-1"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-full py-2 px-4 text-xs font-bold shadow-sm flex items-center gap-1.5"
           >
-            <Plus className="w-3.5 h-3.5" /> クエスト追加
+            <Plus className="w-4 h-4" /> クエスト追加
           </Button>
         </div>
-        <p className="text-xs font-medium text-stone-500 px-1 leading-relaxed">
+        <p className="text-xs md:text-sm font-medium text-stone-500 px-1 leading-relaxed">
           今日できる小さな1歩を実行し、経験値（XP）とGoldを獲得しましょう。
         </p>
       </header>
 
       {/* Filters */}
-      <div className="space-y-2 mb-4">
+      <div className="space-y-3 mb-6 bg-white/70 backdrop-blur-sm p-3 rounded-2xl border border-stone-200/80 shadow-2xs">
         {/* Status filter tabs */}
-        <div className="flex bg-stone-100/80 p-1 rounded-2xl border border-stone-200/60">
+        <div className="flex bg-stone-100/80 p-1 rounded-2xl border border-stone-200/60 max-w-md">
           <button
             onClick={() => setStatusFilter("active")}
             className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all ${
@@ -260,7 +260,7 @@ export default function QuestsPage() {
           <div className="flex gap-1.5 overflow-x-auto py-0.5">
             <button
               onClick={() => setStoryFilter("all")}
-              className={`px-2.5 py-1 rounded-xl text-[11px] font-bold shrink-0 transition-all ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all ${
                 storyFilter === "all"
                   ? "bg-emerald-700 text-white shadow-xs"
                   : "bg-white text-stone-600 border border-stone-200/80 hover:bg-stone-50"
@@ -272,13 +272,13 @@ export default function QuestsPage() {
               <button
                 key={s.id}
                 onClick={() => setStoryFilter(s.id)}
-                className={`px-2.5 py-1 rounded-xl text-[11px] font-bold shrink-0 transition-all flex items-center gap-1 ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all flex items-center gap-1.5 ${
                   storyFilter === s.id
                     ? "bg-emerald-700 text-white shadow-xs"
                     : "bg-white text-stone-600 border border-stone-200/80 hover:bg-stone-50"
                 }`}
               >
-                <Crown className="w-2.5 h-2.5 text-amber-400" />
+                <Crown className="w-3 h-3 text-amber-400" />
                 <span>{s.title}</span>
               </button>
             ))}
@@ -287,7 +287,7 @@ export default function QuestsPage() {
       </div>
 
       {/* Quests List */}
-      <section className="space-y-3 mb-8">
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
         {filteredQuests.length === 0 ? (
           <div className="glass-panel p-8 rounded-3xl border border-stone-200 text-center">
             <Target className="w-10 h-10 text-stone-300 mx-auto mb-2" />

@@ -41,7 +41,7 @@ export default function GuidePage() {
       <header className="bg-gradient-to-b from-emerald-950 via-stone-900 to-stone-900 text-white pt-10 pb-12 px-6 relative overflow-hidden">
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:16px_16px]" />
         
-        <div className="max-w-md mx-auto relative z-10">
+        <div className="max-w-4xl mx-auto relative z-10">
           <Link href="/" className="inline-flex items-center text-stone-400 hover:text-white text-xs font-bold mb-4 transition-colors">
             <ArrowLeft className="w-4 h-4 mr-1" /> アプリホームに戻る
           </Link>
@@ -52,12 +52,12 @@ export default function GuidePage() {
             </span>
           </div>
 
-          <h1 className="text-2xl font-black tracking-tight text-white mb-2 leading-tight">
+          <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white mb-2 leading-tight">
             Crestward Outpost<br />
-            <span className="text-emerald-400 text-xl font-bold">完全攻略ガイド</span>
+            <span className="text-emerald-400 text-xl md:text-2xl font-bold">完全攻略ガイド</span>
           </h1>
 
-          <p className="text-xs font-medium text-stone-300 leading-relaxed">
+          <p className="text-xs md:text-sm font-medium text-stone-300 leading-relaxed max-w-2xl">
             遠大な目標を「複数の達成手段 ➔ 工程 ➔ 今日できる10分のアクション」に多階層で逆算し、RPGのように冒険者レベルを上げながら達成していく人生設計アプリです。
           </p>
 
@@ -112,7 +112,7 @@ export default function GuidePage() {
       </header>
 
       {/* Main Content Area */}
-      <main className="max-w-md mx-auto p-4 -mt-4 relative z-20 space-y-6">
+      <main className="max-w-4xl mx-auto p-4 md:p-8 -mt-4 relative z-20 space-y-6">
 
         {/* TAB 1: FLOW (5-TIER TREE SYSTEM) */}
         {activeTab === "flow" && (

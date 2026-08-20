@@ -122,7 +122,7 @@ export default function JournalAndGuidePage() {
   };
 
   return (
-    <main className="flex flex-col min-h-screen p-4 pb-28 mx-auto max-w-md">
+    <main className="w-full max-w-6xl mx-auto p-4 md:p-8 pb-28 md:pb-12">
       {/* Header */}
       <header className="mb-4 pt-2">
         <div className="flex items-center justify-between mb-2 px-1">

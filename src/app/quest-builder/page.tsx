@@ -358,10 +358,10 @@ JSONの前後に必ず ---CRESTWARD_JSON_START--- と ---CRESTWARD_JSON_END--- �
   }
 
   return (
-    <main className="flex flex-col min-h-screen p-4 pb-28 mx-auto max-w-md">
+    <main className="w-full max-w-6xl mx-auto p-4 md:p-8 pb-28 md:pb-12">
       {/* Header */}
-      <header className="mb-4 pt-1">
-        <div className="flex items-center justify-between mb-3 px-1">
+      <header className="mb-6 pt-1">
+        <div className="flex md:hidden items-center justify-between mb-3 px-1">
           <Link href="/quests" className="inline-flex items-center text-stone-400 hover:text-stone-700 text-xs font-bold transition-colors">
             <ArrowLeft className="w-4 h-4 mr-1" /> クエスト一覧に戻る
           </Link>
@@ -375,168 +375,175 @@ JSONの前後に必ず ---CRESTWARD_JSON_START--- と ---CRESTWARD_JSON_END--- �
         </div>
 
         <div className="flex items-center gap-2 mb-1 px-1">
-          <Wand2 className="w-5 h-5 text-indigo-600" />
-          <h1 className="text-xl font-black text-stone-800 tracking-tight">
+          <Wand2 className="w-6 h-6 text-indigo-600" />
+          <h1 className="text-xl md:text-2xl font-black text-stone-800 tracking-tight">
             多階層クエスト作成工房
           </h1>
         </div>
-        <p className="text-xs font-medium text-stone-500 px-1 leading-relaxed">
+        <p className="text-xs md:text-sm font-medium text-stone-500 px-1 leading-relaxed">
           大目標を「複数の手段（プロジェクト）」「工程（マイルストーン）」「今日できるアクション」へとAIが多階層に分解します。
         </p>
       </header>
 
-      {/* Target Goal (Story) Selector */}
-      <section className="mb-5">
-        <div className="flex justify-between items-center mb-2 px-1">
-          <label className="text-[11px] font-black text-stone-500 uppercase tracking-widest flex items-center gap-1">
-            <Compass className="w-3.5 h-3.5 text-emerald-600" />
-            分解対象の大目標（メインストーリー）
-          </label>
-          <button
-            onClick={() => setIsCreateStoryOpen(true)}
-            className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded-full border border-emerald-200/80 transition-colors shadow-2xs"
-          >
-            <Plus className="w-3 h-3" /> ＋目標を新規作成
-          </button>
+      {/* Responsive 2-Column Grid on Desktop */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left Column: Form & Goal Selector */}
+        <div className="space-y-5">
+          {/* Target Goal (Story) Selector */}
+          <section>
+            <div className="flex justify-between items-center mb-2 px-1">
+              <label className="text-xs font-black text-stone-500 uppercase tracking-widest flex items-center gap-1.5">
+                <Compass className="w-4 h-4 text-emerald-600" />
+                分解対象の大目標（メインストーリー）
+              </label>
+              <button
+                onClick={() => setIsCreateStoryOpen(true)}
+                className="text-xs font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 bg-emerald-50 hover:bg-emerald-100 px-3 py-1 rounded-full border border-emerald-200/80 transition-colors shadow-2xs"
+              >
+                <Plus className="w-3.5 h-3.5" /> ＋目標を新規作成
+              </button>
+            </div>
+
+            {allStories.length === 0 ? (
+              <Card className="rounded-3xl border-dashed border-stone-300 p-6 text-center bg-stone-50/50">
+                <Target className="w-10 h-10 text-stone-400 mx-auto mb-2" />
+                <h3 className="text-sm font-bold text-stone-700">目標が登録されていません</h3>
+                <p className="text-xs text-stone-500 my-2">まずは達成したい大目標を1つ作成しましょう。</p>
+                <Button
+                  onClick={() => setIsCreateStoryOpen(true)}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl py-2 px-4 text-xs font-bold shadow-sm"
+                >
+                  <Plus className="w-3.5 h-3.5 mr-1" /> 目標を作成する
+                </Button>
+              </Card>
+            ) : (
+              <div className="glass-panel p-4 rounded-2xl border border-stone-200 shadow-sm bg-gradient-to-br from-white to-stone-50/70">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
+                    選択中の大目標
+                  </span>
+                  <span className="text-xs font-mono font-black text-emerald-700">
+                    進捗: {activeStory?.progress || 0}%
+                  </span>
+                </div>
+                <h3 className="font-black text-base text-stone-800 mb-1">
+                  👑 {activeStory?.title}
+                </h3>
+                <p className="text-xs text-stone-500 mb-3 leading-relaxed">
+                  {activeStory?.description}
+                </p>
+
+                {/* Switcher Chips */}
+                {allStories.length > 1 && (
+                  <div className="flex gap-1.5 overflow-x-auto pt-2 border-t border-stone-200/60">
+                    {allStories.map((s) => (
+                      <button
+                        key={s.id}
+                        onClick={() => handleSelectStory(s.id)}
+                        className={`px-2.5 py-1 rounded-xl text-[11px] font-bold shrink-0 transition-all ${
+                          activeStory?.id === s.id
+                            ? "bg-emerald-700 text-white shadow-xs"
+                            : "bg-white text-stone-600 border border-stone-200 hover:bg-stone-50"
+                        }`}
+                      >
+                        {s.title}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+
+          {/* Step 1: Current Situation Presets */}
+          <section>
+            <label className="text-xs font-black text-stone-500 uppercase tracking-widest block mb-2 px-1">
+              Step 1: あなたの現在の心境・現在地
+            </label>
+            <div className="grid grid-cols-1 gap-2">
+              {SITUATION_PRESETS.map((sit) => (
+                <div
+                  key={sit.id}
+                  onClick={() => setSelectedSituation(sit.id)}
+                  className={`p-3 rounded-2xl border cursor-pointer transition-all ${
+                    selectedSituation === sit.id
+                      ? "bg-indigo-50/80 border-indigo-500 shadow-sm ring-1 ring-indigo-500"
+                      : "bg-white border-stone-200/80 hover:bg-stone-50"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className={`text-xs font-bold ${selectedSituation === sit.id ? 'text-indigo-950' : 'text-stone-800'}`}>
+                      {sit.label}
+                    </span>
+                    {selectedSituation === sit.id && <Sparkles className="w-3.5 h-3.5 text-indigo-600 shrink-0" />}
+                  </div>
+                  <p className="text-[11px] text-stone-500 mt-0.5 leading-relaxed">
+                    {sit.hint}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </section>
         </div>
 
-        {allStories.length === 0 ? (
-          <Card className="rounded-3xl border-dashed border-stone-300 p-5 text-center bg-stone-50/50">
-            <Target className="w-8 h-8 text-stone-400 mx-auto mb-2" />
-            <h3 className="text-sm font-bold text-stone-700">目標が登録されていません</h3>
-            <p className="text-xs text-stone-500 my-2">まずは達成したい大目標を1つ作成しましょう。</p>
-            <Button
-              onClick={() => setIsCreateStoryOpen(true)}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl py-2 px-4 text-xs font-bold shadow-sm"
-            >
-              <Plus className="w-3.5 h-3.5 mr-1" /> 目標を作成する
-            </Button>
-          </Card>
-        ) : (
-          <div className="glass-panel p-4 rounded-2xl border border-stone-200 shadow-sm bg-gradient-to-br from-white to-stone-50/70">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
-                選択中の大目標
-              </span>
-              {allStories.length > 1 && (
-                <span className="text-[10px] font-bold text-stone-400">
-                  全 {allStories.length} 件
-                </span>
-              )}
+        {/* Right Column: Step 2 Pace & Generation Actions */}
+        <div className="space-y-5">
+          {/* Step 2: Pace Selector */}
+          <section>
+            <label className="text-xs font-black text-stone-500 uppercase tracking-widest block mb-2 px-1">
+              Step 2: 進めたい希望ペース
+            </label>
+            <div className="grid grid-cols-1 gap-2">
+              {PACE_PRESETS.map((pace) => (
+                <div
+                  key={pace.id}
+                  onClick={() => setSelectedPace(pace.id)}
+                  className={`p-3 rounded-2xl border cursor-pointer transition-all ${
+                    selectedPace === pace.id
+                      ? "bg-emerald-50/80 border-emerald-500 shadow-sm ring-1 ring-emerald-500"
+                      : "bg-white border-stone-200/80 hover:bg-stone-50"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className={`text-xs font-bold ${selectedPace === pace.id ? 'text-emerald-950' : 'text-stone-800'}`}>
+                      {pace.label}
+                    </span>
+                    {selectedPace === pace.id && <Zap className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
+                  </div>
+                  <p className="text-[11px] text-stone-500 mt-0.5 leading-relaxed">
+                    {pace.desc}
+                  </p>
+                </div>
+              ))}
             </div>
-            <h3 className="font-black text-sm text-stone-900 leading-snug mb-1">
-              {activeStory?.title}
+          </section>
+
+          {/* Action Buttons */}
+          <div className="glass-panel p-5 rounded-3xl border border-stone-200 shadow-sm space-y-3">
+            <h3 className="text-xs font-black text-stone-500 uppercase tracking-widest">
+              Step 3: ツリー生成
             </h3>
-            {activeStory?.description && (
-              <p className="text-xs text-stone-500 line-clamp-2 leading-relaxed">
-                {activeStory.description}
-              </p>
-            )}
+            <Button
+              onClick={() => handleGeneratePrompt()}
+              disabled={!activeStory}
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl py-6 text-sm font-bold shadow-lg shadow-indigo-600/25 flex items-center justify-center gap-2"
+            >
+              <Sparkles className="w-4 h-4" />
+              AIにおまかせで多階層ツリーを分解する
+            </Button>
 
-            {/* Story Switcher Pills */}
-            {allStories.length > 1 && (
-              <div className="mt-3 pt-2.5 border-t border-stone-200/60 flex items-center gap-1.5 flex-wrap">
-                <span className="text-[10px] font-bold text-stone-400">切り替え:</span>
-                {allStories.map(s => (
-                  <button
-                    key={s.id}
-                    onClick={() => handleSelectStory(s.id)}
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-md transition-all ${
-                      s.id === activeStory?.id 
-                        ? "bg-emerald-600 text-white font-black shadow-xs" 
-                        : "bg-stone-100 hover:bg-stone-200 text-stone-600"
-                    }`}
-                  >
-                    {s.title}
-                  </button>
-                ))}
-              </div>
-            )}
+            {/* 1-Click Multi-Tier Preset Button */}
+            <Button
+              onClick={handleApplyQuickPreset}
+              disabled={!activeStory}
+              variant="outline"
+              className="w-full border-stone-300 hover:bg-stone-50 text-stone-700 rounded-2xl py-5 text-xs font-bold flex items-center justify-center gap-1.5"
+            >
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              AIを使わず「黄金の多階層ツリー」を今すぐ自動生成
+            </Button>
           </div>
-        )}
-      </section>
-
-      {/* Step 1: Current Situation Presets */}
-      <section className="mb-5">
-        <label className="text-[11px] font-black text-stone-500 uppercase tracking-widest block mb-2 px-1">
-          Step 1: あなたの現在の心境・現在地
-        </label>
-        <div className="grid grid-cols-1 gap-2">
-          {SITUATION_PRESETS.map((sit) => (
-            <div
-              key={sit.id}
-              onClick={() => setSelectedSituation(sit.id)}
-              className={`p-3 rounded-2xl border cursor-pointer transition-all ${
-                selectedSituation === sit.id
-                  ? "bg-indigo-50/80 border-indigo-500 shadow-sm ring-1 ring-indigo-500"
-                  : "bg-white border-stone-200/80 hover:bg-stone-50"
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className={`text-xs font-bold ${selectedSituation === sit.id ? 'text-indigo-950' : 'text-stone-800'}`}>
-                  {sit.label}
-                </span>
-                {selectedSituation === sit.id && <Sparkles className="w-3.5 h-3.5 text-indigo-600 shrink-0" />}
-              </div>
-              <p className="text-[10px] text-stone-500 mt-0.5 leading-relaxed">
-                {sit.hint}
-              </p>
-            </div>
-          ))}
         </div>
-      </section>
-
-      {/* Step 2: Pace Selector */}
-      <section className="mb-6">
-        <label className="text-[11px] font-black text-stone-500 uppercase tracking-widest block mb-2 px-1">
-          Step 2: 進めたい希望ペース
-        </label>
-        <div className="grid grid-cols-1 gap-2">
-          {PACE_PRESETS.map((pace) => (
-            <div
-              key={pace.id}
-              onClick={() => setSelectedPace(pace.id)}
-              className={`p-3 rounded-2xl border cursor-pointer transition-all ${
-                selectedPace === pace.id
-                  ? "bg-emerald-50/80 border-emerald-500 shadow-sm ring-1 ring-emerald-500"
-                  : "bg-white border-stone-200/80 hover:bg-stone-50"
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className={`text-xs font-bold ${selectedPace === pace.id ? 'text-emerald-950' : 'text-stone-800'}`}>
-                  {pace.label}
-                </span>
-                {selectedPace === pace.id && <Zap className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
-              </div>
-              <p className="text-[10px] text-stone-500 mt-0.5 leading-relaxed">
-                {pace.desc}
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Action Buttons */}
-      <div className="space-y-2.5">
-        <Button
-          onClick={() => handleGeneratePrompt()}
-          disabled={!activeStory}
-          className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl py-6 text-sm font-bold shadow-lg shadow-indigo-600/25 flex items-center justify-center gap-2"
-        >
-          <Sparkles className="w-4 h-4" />
-          AIにおまかせで多階層ツリーを分解する
-        </Button>
-
-        {/* 1-Click Multi-Tier Preset Button */}
-        <Button
-          onClick={handleApplyQuickPreset}
-          disabled={!activeStory}
-          variant="outline"
-          className="w-full border-stone-300 hover:bg-stone-50 text-stone-700 rounded-2xl py-5 text-xs font-bold flex items-center justify-center gap-1.5"
-        >
-          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-          AIを使わず「黄金の多階層ツリー」を今すぐ自動生成
-        </Button>
       </div>
 
       {/* Prompt Result Modal */}

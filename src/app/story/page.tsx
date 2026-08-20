@@ -350,12 +350,12 @@ export default function StoryPage() {
     : projects.filter(p => p.id === selectedProjectId);
 
   return (
-    <main className="flex flex-col min-h-screen p-4 pb-28 mx-auto max-w-md">
+    <main className="w-full max-w-6xl mx-auto p-4 md:p-8 pb-28 md:pb-12">
       {/* Navigation Header */}
-      <div className="flex items-center justify-between mb-3 px-1 pt-1">
+      <div className="flex items-center justify-between mb-4 px-1 pt-1">
         <div className="flex items-center gap-1.5">
-          <MapIcon className="w-4 h-4 text-emerald-600" />
-          <h1 className="text-[11px] font-black text-emerald-800 uppercase tracking-widest font-mono">
+          <MapIcon className="w-5 h-5 text-emerald-600" />
+          <h1 className="text-xs md:text-sm font-black text-emerald-800 uppercase tracking-widest font-mono">
             CRESTWARD ROADMAP
           </h1>
         </div>
