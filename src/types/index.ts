@@ -34,6 +34,7 @@ export type MainStory = {
   futureVisionId?: string;
   status: StoryStatus;
   progress: number; // 0-100
+  metric?: QuestMetric;
   startedAt: number;
   endedAt?: number;
   parentStoryId?: string;
@@ -54,6 +55,7 @@ export type GoalProject = {
   order: number;
   status: ProjectStatus;
   progress: number; // 0-100
+  metric?: QuestMetric;
   createdAt: number;
   updatedAt?: number;
 };
@@ -259,4 +261,5 @@ export interface Milestone {
   title: string;
   order: number;
   status: "active" | "completed";
+  metric?: QuestMetric;
 }

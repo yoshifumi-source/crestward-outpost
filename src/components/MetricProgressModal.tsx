@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { Quest } from "@/types";
+import { Quest, QuestMetric, MetricProgressLog } from "@/types";
 import { storage } from "@/services/storage";
 import { 
   BarChart3, 
@@ -20,15 +20,24 @@ import {
   Target
 } from "lucide-react";
 
+interface MetricTargetItem {
+  id: string;
+  title: string;
+  metric?: QuestMetric;
+  levelType?: "story" | "project" | "milestone" | "quest";
+}
+
 interface MetricProgressModalProps {
-  quest: Quest | null;
+  quest?: Quest | null;
+  targetItem?: MetricTargetItem | null;
   isOpen: boolean;
   onClose: () => void;
-  onProgressUpdated: (quest: Quest, isCompleted: boolean) => void;
+  onProgressUpdated?: (item: any, isCompleted: boolean) => void;
 }
 
 export function MetricProgressModal({
   quest,
+  targetItem,
   isOpen,
   onClose,
   onProgressUpdated
@@ -38,6 +47,13 @@ export function MetricProgressModal({
   const [note, setNote] = useState<string>("");
   const [showHistory, setShowHistory] = useState<boolean>(false);
 
+  const activeTarget = targetItem || (quest ? {
+    id: quest.id,
+    title: quest.title,
+    metric: quest.metric,
+    levelType: "quest" as const
+  } : null);
+
   useEffect(() => {
     if (isOpen) {
       setInputValue("");
@@ -45,11 +61,11 @@ export function MetricProgressModal({
       setMode("add");
       setShowHistory(false);
     }
-  }, [isOpen, quest]);
+  }, [isOpen, activeTarget?.id]);
 
-  if (!quest || !quest.metric) return null;
+  if (!activeTarget || !activeTarget.metric) return null;
 
-  const { targetValue, currentValue, unit, history = [] } = quest.metric;
+  const { targetValue, currentValue, unit, history = [] } = activeTarget.metric;
   const currentPercent = Math.min(100, Math.round((currentValue / targetValue) * 1000) / 10);
 
   const num = parseFloat(inputValue) || 0;
@@ -59,20 +75,42 @@ export function MetricProgressModal({
   const projectedPercent = Math.min(100, Math.round((projectedValue / targetValue) * 1000) / 10);
   const isGoalReached = projectedValue >= targetValue;
 
+  const levelLabels = {
+    story: "Level 1: 🌟 大目標",
+    project: "Level 2: 📱 達成手段",
+    milestone: "Level 3: 🚩 工程",
+    quest: "Level 4: ⚔️ クエスト"
+  };
+
   const handleSave = () => {
     if (isNaN(num) || num === 0) {
       if (mode === "add") return;
     }
 
-    const { quest: updatedQuest, isCompleted } = storage.updateQuestMetric(
-      quest.id,
-      num,
-      mode === "absolute",
-      note
-    );
+    const levelType = activeTarget.levelType || "quest";
+    let updatedResult: any = null;
+    let isCompleted = false;
 
-    if (updatedQuest) {
-      onProgressUpdated(updatedQuest, isCompleted);
+    if (levelType === "story") {
+      const res = storage.updateStoryMetric(activeTarget.id, num, mode === "absolute", note);
+      updatedResult = res.story;
+      isCompleted = res.isCompleted;
+    } else if (levelType === "project") {
+      const res = storage.updateProjectMetric(activeTarget.id, num, mode === "absolute", note);
+      updatedResult = res.project;
+      isCompleted = res.isCompleted;
+    } else if (levelType === "milestone") {
+      const res = storage.updateMilestoneMetric(activeTarget.id, num, mode === "absolute", note);
+      updatedResult = res.milestone;
+      isCompleted = res.isCompleted;
+    } else {
+      const res = storage.updateQuestMetric(activeTarget.id, num, mode === "absolute", note);
+      updatedResult = res.quest;
+      isCompleted = res.isCompleted;
+    }
+
+    if (onProgressUpdated && updatedResult) {
+      onProgressUpdated(updatedResult, isCompleted);
     }
     onClose();
   };
@@ -94,10 +132,10 @@ export function MetricProgressModal({
             <TrendingUp className="w-5 h-5 text-emerald-600" />
           </div>
           <DialogTitle className="text-base font-black text-stone-800 leading-snug">
-            進捗を記録する
+            {levelLabels[activeTarget.levelType || "quest"]} 進捗記録
           </DialogTitle>
           <DialogDescription className="text-xs font-medium text-stone-500 line-clamp-1">
-            {quest.title}
+            {activeTarget.title}
           </DialogDescription>
         </DialogHeader>
 
@@ -242,7 +280,7 @@ export function MetricProgressModal({
 
             {showHistory && (
               <div className="max-h-32 overflow-y-auto space-y-1.5 mt-1.5 pr-1">
-                {history.map((h) => (
+                {history.map((h: MetricProgressLog) => (
                   <div key={h.id} className="p-2 rounded-lg bg-stone-50 border border-stone-100 text-[10px] flex justify-between items-center">
                     <div>
                       <span className="font-mono text-emerald-700 font-bold mr-1.5">

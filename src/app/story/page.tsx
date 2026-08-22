@@ -30,7 +30,11 @@ import {
   Zap,
   HelpCircle,
   Crown,
-  HeartHandshake
+  HeartHandshake,
+  GripVertical,
+  ArrowUp,
+  ArrowDown,
+  BarChart3
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { MetricProgressModal } from "@/components/MetricProgressModal";
@@ -79,32 +83,53 @@ export default function StoryPage() {
   const [isCreateStoryOpen, setIsCreateStoryOpen] = useState(false);
   const [newStoryTitle, setNewStoryTitle] = useState("");
   const [newStoryDesc, setNewStoryDesc] = useState("");
+  const [newStoryHasMetric, setNewStoryHasMetric] = useState(false);
+  const [newStoryMetricTarget, setNewStoryMetricTarget] = useState("");
+  const [newStoryMetricUnit, setNewStoryMetricUnit] = useState("円");
 
   // Edit Story Dialog
   const [isEditStoryOpen, setIsEditStoryOpen] = useState(false);
   const [editStoryTitle, setEditStoryTitle] = useState("");
   const [editStoryDesc, setEditStoryDesc] = useState("");
+  const [editStoryHasMetric, setEditStoryHasMetric] = useState(false);
+  const [editStoryMetricTarget, setEditStoryMetricTarget] = useState("");
+  const [editStoryMetricCurrent, setEditStoryMetricCurrent] = useState("");
+  const [editStoryMetricUnit, setEditStoryMetricUnit] = useState("円");
 
   // Add Project Dialog
   const [isAddProjectOpen, setIsAddProjectOpen] = useState(false);
   const [newProjectTitle, setNewProjectTitle] = useState("");
   const [newProjectDesc, setNewProjectDesc] = useState("");
+  const [newProjHasMetric, setNewProjHasMetric] = useState(false);
+  const [newProjMetricTarget, setNewProjMetricTarget] = useState("");
+  const [newProjMetricUnit, setNewProjMetricUnit] = useState("円");
 
   // Edit Project Dialog
   const [isEditProjectOpen, setIsEditProjectOpen] = useState(false);
   const [editProject, setEditProject] = useState<GoalProject | null>(null);
   const [editProjectTitle, setEditProjectTitle] = useState("");
   const [editProjectDesc, setEditProjectDesc] = useState("");
+  const [editProjHasMetric, setEditProjHasMetric] = useState(false);
+  const [editProjMetricTarget, setEditProjMetricTarget] = useState("");
+  const [editProjMetricCurrent, setEditProjMetricCurrent] = useState("");
+  const [editProjMetricUnit, setEditProjMetricUnit] = useState("円");
 
   // Add Milestone Dialog
   const [isAddMilestoneOpen, setIsAddMilestoneOpen] = useState(false);
   const [targetProjectId, setTargetProjectId] = useState<string>("");
   const [newMilestoneTitle, setNewMilestoneTitle] = useState("");
+  const [newMsHasMetric, setNewMsHasMetric] = useState(false);
+  const [newMsMetricTarget, setNewMsMetricTarget] = useState("");
+  const [newMsMetricUnit, setNewMsMetricUnit] = useState("ページ");
 
   // Edit Milestone Dialog
   const [isEditMilestoneOpen, setIsEditMilestoneOpen] = useState(false);
   const [editMilestone, setEditMilestone] = useState<Milestone | null>(null);
   const [editMilestoneTitle, setEditMilestoneTitle] = useState("");
+  const [editMsHasMetric, setEditMsHasMetric] = useState(false);
+  const [editMsMetricTarget, setEditMsMetricTarget] = useState("");
+  const [editMsMetricCurrent, setEditMsMetricCurrent] = useState("");
+  const [editMsMetricUnit, setEditMsMetricUnit] = useState("ページ");
 
   // Add Quest to Milestone Dialog
   const [isAddQuestOpen, setIsAddQuestOpen] = useState(false);
@@ -128,8 +153,16 @@ export default function StoryPage() {
   const [editMetricCurrent, setEditMetricCurrent] = useState("");
   const [editMetricUnit, setEditMetricUnit] = useState("回");
 
-  // Metric Progress & WHY Modals
-  const [progressQuest, setProgressQuest] = useState<Quest | null>(null);
+  // Drag & Drop Reorder State
+  const [draggedQuestId, setDraggedQuestId] = useState<string | null>(null);
+
+  // Universal Metric Progress & WHY Modals
+  const [targetMetricItem, setTargetMetricItem] = useState<{
+    id: string;
+    title: string;
+    metric?: QuestMetric;
+    levelType: "story" | "project" | "milestone" | "quest";
+  } | null>(null);
   const [whyQuest, setWhyQuest] = useState<Quest | null>(null);
 
   const loadData = () => {
@@ -185,12 +218,24 @@ export default function StoryPage() {
   const handleCreateNewStory = () => {
     if (!newStoryTitle.trim()) return;
 
+    let storyMetric: QuestMetric | undefined = undefined;
+    const targetNum = parseFloat(newStoryMetricTarget);
+    if (newStoryHasMetric && !isNaN(targetNum) && targetNum > 0) {
+      storyMetric = {
+        targetValue: targetNum,
+        currentValue: 0,
+        unit: newStoryMetricUnit.trim() || "円",
+        history: []
+      };
+    }
+
     const createdStory: MainStory = {
       id: `story_${Date.now()}`,
       title: newStoryTitle.trim(),
       description: newStoryDesc.trim() || "自己成長と目標の実現を目指す",
       status: "active",
       progress: 0,
+      metric: storyMetric,
       startedAt: Date.now(),
       createdAt: Date.now(),
       updatedAt: Date.now()
@@ -216,21 +261,50 @@ export default function StoryPage() {
     setIsCreateStoryOpen(false);
     setNewStoryTitle("");
     setNewStoryDesc("");
+    setNewStoryHasMetric(false);
+    setNewStoryMetricTarget("");
     loadData();
   };
 
   const handleOpenEditStory = (story: MainStory) => {
     setEditStoryTitle(story.title);
     setEditStoryDesc(story.description);
+    if (story.metric) {
+      setEditStoryHasMetric(true);
+      setEditStoryMetricTarget(String(story.metric.targetValue));
+      setEditStoryMetricCurrent(String(story.metric.currentValue || 0));
+      setEditStoryMetricUnit(story.metric.unit || "円");
+    } else {
+      setEditStoryHasMetric(false);
+      setEditStoryMetricTarget("");
+      setEditStoryMetricCurrent("0");
+      setEditStoryMetricUnit("円");
+    }
     setIsEditStoryOpen(true);
   };
 
   const handleSaveEditStory = () => {
     if (!activeStory || !editStoryTitle.trim()) return;
+
+    let metricObj: QuestMetric | undefined = undefined;
+    const targetNum = parseFloat(editStoryMetricTarget);
+    if (editStoryHasMetric && !isNaN(targetNum) && targetNum > 0) {
+      metricObj = {
+        targetValue: targetNum,
+        currentValue: parseFloat(editStoryMetricCurrent) || 0,
+        unit: editStoryMetricUnit.trim() || "円",
+        history: activeStory.metric?.history || []
+      };
+    }
+
     const updated: MainStory = {
       ...activeStory,
       title: editStoryTitle.trim(),
-      description: editStoryDesc.trim() || "自己成長と目標の実現を目指す"
+      description: editStoryDesc.trim() || "自己成長と目標の実現を目指す",
+      metric: metricObj,
+      progress: metricObj && metricObj.targetValue > 0 
+        ? Math.min(100, Math.round((metricObj.currentValue / metricObj.targetValue) * 100))
+        : activeStory.progress
     };
     storage.updateStory(updated);
     setIsEditStoryOpen(false);
@@ -248,15 +322,42 @@ export default function StoryPage() {
     setEditProject(proj);
     setEditProjectTitle(proj.title);
     setEditProjectDesc(proj.description || "");
+    if (proj.metric) {
+      setEditProjHasMetric(true);
+      setEditProjMetricTarget(String(proj.metric.targetValue));
+      setEditProjMetricCurrent(String(proj.metric.currentValue || 0));
+      setEditProjMetricUnit(proj.metric.unit || "円");
+    } else {
+      setEditProjHasMetric(false);
+      setEditProjMetricTarget("");
+      setEditProjMetricCurrent("0");
+      setEditProjMetricUnit("円");
+    }
     setIsEditProjectOpen(true);
   };
 
   const handleSaveEditProject = () => {
     if (!editProject || !editProjectTitle.trim()) return;
+
+    let metricObj: QuestMetric | undefined = undefined;
+    const targetNum = parseFloat(editProjMetricTarget);
+    if (editProjHasMetric && !isNaN(targetNum) && targetNum > 0) {
+      metricObj = {
+        targetValue: targetNum,
+        currentValue: parseFloat(editProjMetricCurrent) || 0,
+        unit: editProjMetricUnit.trim() || "円",
+        history: editProject.metric?.history || []
+      };
+    }
+
     const updated: GoalProject = {
       ...editProject,
       title: editProjectTitle.trim(),
-      description: editProjectDesc.trim() || undefined
+      description: editProjectDesc.trim() || undefined,
+      metric: metricObj,
+      progress: metricObj && metricObj.targetValue > 0
+        ? Math.min(100, Math.round((metricObj.currentValue / metricObj.targetValue) * 100))
+        : editProject.progress
     };
     storage.updateProject(updated);
     setIsEditProjectOpen(false);
@@ -267,6 +368,17 @@ export default function StoryPage() {
   const handleAddProject = () => {
     if (!selectedStoryId || !newProjectTitle.trim()) return;
 
+    let projMetric: QuestMetric | undefined = undefined;
+    const targetNum = parseFloat(newProjMetricTarget);
+    if (newProjHasMetric && !isNaN(targetNum) && targetNum > 0) {
+      projMetric = {
+        targetValue: targetNum,
+        currentValue: 0,
+        unit: newProjMetricUnit.trim() || "円",
+        history: []
+      };
+    }
+
     const newProj: GoalProject = {
       id: `proj_${Date.now()}`,
       storyId: selectedStoryId,
@@ -275,6 +387,7 @@ export default function StoryPage() {
       order: projects.length,
       status: "active",
       progress: 0,
+      metric: projMetric,
       createdAt: Date.now()
     };
 
@@ -282,6 +395,8 @@ export default function StoryPage() {
     setIsAddProjectOpen(false);
     setNewProjectTitle("");
     setNewProjectDesc("");
+    setNewProjHasMetric(false);
+    setNewProjMetricTarget("");
     loadData();
   };
 
@@ -295,6 +410,17 @@ export default function StoryPage() {
   const handleAddMilestone = () => {
     if (!targetProjectId || !newMilestoneTitle.trim()) return;
 
+    let msMetric: QuestMetric | undefined = undefined;
+    const targetNum = parseFloat(newMsMetricTarget);
+    if (newMsHasMetric && !isNaN(targetNum) && targetNum > 0) {
+      msMetric = {
+        targetValue: targetNum,
+        currentValue: 0,
+        unit: newMsMetricUnit.trim() || "ページ",
+        history: []
+      };
+    }
+
     const currentMs = storage.getMilestones();
     const projMs = currentMs.filter(m => m.projectId === targetProjectId);
     const newMs: Milestone = {
@@ -303,31 +429,104 @@ export default function StoryPage() {
       projectId: targetProjectId,
       title: newMilestoneTitle.trim(),
       order: projMs.length,
-      status: "active"
+      status: "active",
+      metric: msMetric
     };
 
     storage.saveMilestones([...currentMs, newMs]);
     setIsAddMilestoneOpen(false);
     setNewMilestoneTitle("");
+    setNewMsHasMetric(false);
+    setNewMsMetricTarget("");
     loadData();
   };
 
   const handleOpenEditMilestone = (ms: Milestone) => {
     setEditMilestone(ms);
     setEditMilestoneTitle(ms.title);
+    if (ms.metric) {
+      setEditMsHasMetric(true);
+      setEditMsMetricTarget(String(ms.metric.targetValue));
+      setEditMsMetricCurrent(String(ms.metric.currentValue || 0));
+      setEditMsMetricUnit(ms.metric.unit || "ページ");
+    } else {
+      setEditMsHasMetric(false);
+      setEditMsMetricTarget("");
+      setEditMsMetricCurrent("0");
+      setEditMsMetricUnit("ページ");
+    }
     setIsEditMilestoneOpen(true);
   };
 
   const handleSaveEditMilestone = () => {
     if (!editMilestone || !editMilestoneTitle.trim()) return;
+
+    let metricObj: QuestMetric | undefined = undefined;
+    const targetNum = parseFloat(editMsMetricTarget);
+    if (editMsHasMetric && !isNaN(targetNum) && targetNum > 0) {
+      metricObj = {
+        targetValue: targetNum,
+        currentValue: parseFloat(editMsMetricCurrent) || 0,
+        unit: editMsMetricUnit.trim() || "ページ",
+        history: editMilestone.metric?.history || []
+      };
+    }
+
     const updated: Milestone = {
       ...editMilestone,
-      title: editMilestoneTitle.trim()
+      title: editMilestoneTitle.trim(),
+      metric: metricObj
     };
     storage.updateMilestone(updated);
     setIsEditMilestoneOpen(false);
     setEditMilestone(null);
     loadData();
+  };
+
+  // Reorder handlers
+  const handleMoveQuest = (questId: string, direction: "up" | "down", list: Quest[]) => {
+    const idx = list.findIndex(q => q.id === questId);
+    if (idx < 0) return;
+    const targetIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (targetIdx < 0 || targetIdx >= list.length) return;
+
+    const allQuests = storage.getQuests();
+    const itemA = list[idx];
+    const itemB = list[targetIdx];
+
+    const idxAInAll = allQuests.findIndex(q => q.id === itemA.id);
+    const idxBInAll = allQuests.findIndex(q => q.id === itemB.id);
+
+    if (idxAInAll >= 0 && idxBInAll >= 0) {
+      const updated = [...allQuests];
+      updated[idxAInAll] = itemB;
+      updated[idxBInAll] = itemA;
+      storage.saveQuests(updated);
+      setQuests(updated.filter(q => q.storyId === selectedStoryId));
+    }
+  };
+
+  const handleQuestDrop = (targetQuestId: string, list: Quest[]) => {
+    if (!draggedQuestId || draggedQuestId === targetQuestId) return;
+    const sourceIdx = list.findIndex(q => q.id === draggedQuestId);
+    const targetIdx = list.findIndex(q => q.id === targetQuestId);
+    if (sourceIdx < 0 || targetIdx < 0) return;
+
+    const allQuests = storage.getQuests();
+    const sourceItem = list[sourceIdx];
+    const targetItem = list[targetIdx];
+
+    const sourceInAll = allQuests.findIndex(q => q.id === sourceItem.id);
+    const targetInAll = allQuests.findIndex(q => q.id === targetItem.id);
+
+    if (sourceInAll >= 0 && targetInAll >= 0) {
+      const updated = [...allQuests];
+      const [removed] = updated.splice(sourceInAll, 1);
+      updated.splice(targetInAll, 0, removed);
+      storage.saveQuests(updated);
+      setQuests(updated.filter(q => q.storyId === selectedStoryId));
+    }
+    setDraggedQuestId(null);
   };
 
   const handleDeleteMilestone = (msId: string) => {
@@ -606,12 +805,35 @@ export default function StoryPage() {
                     {activeStory.description}
                   </p>
 
-                  <div className="bg-white p-3 rounded-2xl border border-stone-200/80 shadow-inner">
-                    <div className="flex justify-between text-xs font-bold text-stone-600 mb-1">
-                      <span>大目標の統合達成度</span>
-                      <span className="font-mono text-emerald-700 font-black text-sm">{activeStory.progress}%</span>
+                  {/* Level 1 Progress & Metric Gauge */}
+                  <div className="bg-white p-3.5 rounded-2xl border border-stone-200/80 shadow-inner space-y-2">
+                    <div className="flex justify-between items-baseline text-xs font-bold text-stone-600">
+                      <span className="flex items-center gap-1">
+                        <BarChart3 className="w-3.5 h-3.5 text-emerald-600" />
+                        {activeStory.metric ? "大目標の数値到達度" : "大目標の統合達成度"}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        {activeStory.metric && (
+                          <span className="font-mono text-stone-600 text-xs">
+                            <strong className="text-emerald-700">{activeStory.metric.currentValue.toLocaleString()}</strong>
+                            <span className="text-stone-400 mx-0.5">/</span>
+                            {activeStory.metric.targetValue.toLocaleString()} {activeStory.metric.unit}
+                          </span>
+                        )}
+                        <span className="font-mono text-emerald-700 font-black text-sm">{activeStory.progress}%</span>
+                      </div>
                     </div>
-                    <Progress value={activeStory.progress} className="h-2 bg-stone-100 *:bg-emerald-600" />
+                    <Progress value={activeStory.progress} className="h-2.5 bg-stone-100 *:bg-emerald-600" />
+                    
+                    {activeStory.metric && (
+                      <button
+                        onClick={() => setTargetMetricItem({ id: activeStory.id, title: activeStory.title, metric: activeStory.metric, levelType: "story" })}
+                        className="w-full py-1.5 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold flex items-center justify-center gap-1.5 border border-emerald-200/80 transition-colors shadow-2xs"
+                      >
+                        <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
+                        ＋ 大目標の進捗を記録する
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -778,13 +1000,32 @@ export default function StoryPage() {
                       </p>
                     )}
 
-                    {/* Project Progress Gauge */}
-                    <div className="bg-stone-50 p-2.5 rounded-xl border border-stone-200/60 mb-3">
-                      <div className="flex justify-between text-[11px] font-bold text-stone-600 mb-1">
-                        <span>トラック到達度</span>
-                        <span className="font-mono text-indigo-700 font-black">{project.progress}%</span>
+                    {/* Project Progress Gauge with Metric Support */}
+                    <div className="bg-stone-50 p-2.5 rounded-xl border border-stone-200/60 mb-3 space-y-1.5">
+                      <div className="flex justify-between items-baseline text-[11px] font-bold text-stone-600">
+                        <span>{project.metric ? "手段の数値到達度" : "トラック到達度"}</span>
+                        <div className="flex items-center gap-2">
+                          {project.metric && (
+                            <span className="font-mono text-stone-600 text-[11px]">
+                              <strong className="text-indigo-700">{project.metric.currentValue.toLocaleString()}</strong>
+                              <span className="text-stone-400 mx-0.5">/</span>
+                              {project.metric.targetValue.toLocaleString()} {project.metric.unit}
+                            </span>
+                          )}
+                          <span className="font-mono text-indigo-700 font-black">{project.progress}%</span>
+                        </div>
                       </div>
-                      <Progress value={project.progress} className="h-1.5 bg-stone-200/50 *:bg-indigo-600" />
+                      <Progress value={project.progress} className="h-2 bg-stone-200/60 *:bg-indigo-600" />
+                      
+                      {project.metric && (
+                        <button
+                          onClick={() => setTargetMetricItem({ id: project.id, title: project.title, metric: project.metric, levelType: "project" })}
+                          className="w-full py-1 px-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-800 text-[10px] font-bold flex items-center justify-center gap-1 border border-indigo-200/80 transition-colors"
+                        >
+                          <TrendingUp className="w-3 h-3 text-indigo-600" />
+                          ＋ 手段の進捗を記録する
+                        </button>
+                      )}
                     </div>
 
                     {/* Level 3: Milestones Tree */}
@@ -808,12 +1049,15 @@ export default function StoryPage() {
                         projectMilestones.map((ms, msIdx) => {
                           const msQuests = quests.filter(q => q.milestoneId === ms.id);
                           const completedCount = msQuests.filter(q => q.status === "completed").length;
+                          const msPercent = ms.metric 
+                            ? Math.min(100, Math.round((ms.metric.currentValue / ms.metric.targetValue) * 100))
+                            : msQuests.length > 0 ? Math.round((completedCount / msQuests.length) * 100) : 0;
 
                           return (
-                            <div key={ms.id} className="p-3 rounded-2xl bg-stone-50/80 border border-stone-200/80">
+                            <div key={ms.id} className="p-3 rounded-2xl bg-stone-50/80 border border-stone-200/80 space-y-2">
                               {/* Milestone Header */}
-                              <div className="flex justify-between items-center mb-2">
-                                <div className="flex items-center gap-1.5">
+                              <div className="flex justify-between items-center">
+                                <div className="flex items-center gap-1.5 flex-wrap">
                                   <span className="w-4 h-4 rounded-md bg-stone-200 text-stone-700 text-[10px] font-black flex items-center justify-center">
                                     {msIdx + 1}
                                   </span>
@@ -823,12 +1067,27 @@ export default function StoryPage() {
                                   <h5 className="font-black text-xs text-stone-800">
                                     {ms.title}
                                   </h5>
-                                  <span className="font-mono text-[10px] text-stone-400">
-                                    ({completedCount}/{msQuests.length})
-                                  </span>
+                                  {ms.metric ? (
+                                    <span className="font-mono text-[10px] font-bold text-teal-800 bg-teal-50 px-1.5 py-0.2 rounded border border-teal-200/60">
+                                      {ms.metric.currentValue.toLocaleString()} / {ms.metric.targetValue.toLocaleString()} {ms.metric.unit} ({msPercent}%)
+                                    </span>
+                                  ) : (
+                                    <span className="font-mono text-[10px] text-stone-400">
+                                      ({completedCount}/{msQuests.length})
+                                    </span>
+                                  )}
                                 </div>
 
                                 <div className="flex items-center gap-1">
+                                  {ms.metric && (
+                                    <button
+                                      onClick={() => setTargetMetricItem({ id: ms.id, title: ms.title, metric: ms.metric, levelType: "milestone" })}
+                                      className="text-[9px] font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 px-1.5 py-0.5 rounded border border-teal-200/60 flex items-center gap-0.5"
+                                      title="工程の進捗を記録"
+                                    >
+                                      <TrendingUp className="w-2.5 h-2.5 text-teal-600" /> 進捗
+                                    </button>
+                                  )}
                                   <button
                                     onClick={() => handleOpenEditMilestone(ms)}
                                     className="p-0.5 text-stone-400 hover:text-stone-700 rounded"
@@ -855,9 +1114,14 @@ export default function StoryPage() {
                                 </div>
                               </div>
 
-                              {/* Level 4: Quests List inside Milestone */}
-                              <div className="space-y-1.5 mt-2">
-                                {msQuests.map((q) => {
+                              {/* Milestone Metric Progress Bar if applicable */}
+                              {ms.metric && (
+                                <Progress value={msPercent} className="h-1.5 bg-stone-200 *:bg-teal-600" />
+                              )}
+
+                              {/* Level 4: Quests List inside Milestone with Drag & Drop Reordering */}
+                              <div className="space-y-1.5 pt-1">
+                                {msQuests.map((q, qIdx) => {
                                   const isComp = q.status === "completed";
                                   const metric = q.metric;
                                   const percent = metric ? Math.min(100, Math.round((metric.currentValue / metric.targetValue) * 100)) : null;
@@ -865,7 +1129,13 @@ export default function StoryPage() {
                                   return (
                                     <div 
                                       key={q.id}
+                                      draggable
+                                      onDragStart={() => setDraggedQuestId(q.id)}
+                                      onDragOver={(e) => e.preventDefault()}
+                                      onDrop={() => handleQuestDrop(q.id, msQuests)}
                                       className={`p-2.5 rounded-xl border transition-all ${
+                                        draggedQuestId === q.id ? "opacity-40 border-dashed border-stone-400" : ""
+                                      } ${
                                         isComp 
                                           ? "bg-white/50 border-stone-200/50 opacity-60 line-through text-stone-400" 
                                           : "bg-white border-stone-200/90 shadow-2xs hover:border-emerald-300"
@@ -873,6 +1143,38 @@ export default function StoryPage() {
                                     >
                                       <div className="flex justify-between items-start gap-2">
                                         <div className="flex items-start gap-1.5 flex-1">
+                                          {/* Drag Handle & Reorder buttons */}
+                                          <div className="flex items-center gap-0.5 text-stone-300 mr-0.5 select-none shrink-0">
+                                            <span 
+                                              className="cursor-grab active:cursor-grabbing hover:text-stone-600 p-0.5" 
+                                              title="ドラッグして並べ替え"
+                                            >
+                                              <GripVertical className="w-3.5 h-3.5" />
+                                            </span>
+                                            <div className="flex flex-col">
+                                              {qIdx > 0 && (
+                                                <button
+                                                  type="button"
+                                                  onClick={() => handleMoveQuest(q.id, "up", msQuests)}
+                                                  className="hover:text-stone-700 p-0.2"
+                                                  title="上へ移動"
+                                                >
+                                                  <ArrowUp className="w-2.5 h-2.5" />
+                                                </button>
+                                              )}
+                                              {qIdx < msQuests.length - 1 && (
+                                                <button
+                                                  type="button"
+                                                  onClick={() => handleMoveQuest(q.id, "down", msQuests)}
+                                                  className="hover:text-stone-700 p-0.2"
+                                                  title="下へ移動"
+                                                >
+                                                  <ArrowDown className="w-2.5 h-2.5" />
+                                                </button>
+                                              )}
+                                            </div>
+                                          </div>
+
                                           {isComp ? (
                                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
                                           ) : (
@@ -923,7 +1225,7 @@ export default function StoryPage() {
                                             </span>
                                             {!isComp && (
                                               <button
-                                                onClick={() => setProgressQuest(q)}
+                                                onClick={() => setTargetMetricItem({ id: q.id, title: q.title, metric: q.metric, levelType: "quest" })}
                                                 className="text-[9px] font-black text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-1.5 py-0.5 rounded flex items-center gap-0.5"
                                               >
                                                 <TrendingUp className="w-2.5 h-2.5" /> ＋進捗
@@ -1034,6 +1336,45 @@ export default function StoryPage() {
               />
             </div>
 
+            {/* Numeric Metric Switch for New Story */}
+            <div className="p-3 bg-stone-50 rounded-2xl border border-stone-200/80">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-stone-800">
+                  大目標の数値目標を設定する
+                </label>
+                <input
+                  type="checkbox"
+                  checked={newStoryHasMetric}
+                  onChange={(e) => setNewStoryHasMetric(e.target.checked)}
+                  className="w-4 h-4 accent-emerald-600"
+                />
+              </div>
+
+              {newStoryHasMetric && (
+                <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-stone-200/60">
+                  <div>
+                    <label className="block text-[10px] font-bold text-stone-600 mb-0.5">目標数値</label>
+                    <Input
+                      type="number"
+                      value={newStoryMetricTarget}
+                      onChange={(e) => setNewStoryMetricTarget(e.target.value)}
+                      placeholder="例: 1000000"
+                      className="text-xs rounded-xl"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-stone-600 mb-0.5">単位</label>
+                    <Input
+                      value={newStoryMetricUnit}
+                      onChange={(e) => setNewStoryMetricUnit(e.target.value)}
+                      placeholder="円 / ページ / 件"
+                      className="text-xs rounded-xl"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Quick Goal Idea Chips */}
             <div>
               <label className="block text-[10px] font-black text-stone-400 uppercase tracking-widest mb-1.5">
@@ -1112,6 +1453,45 @@ export default function StoryPage() {
               />
             </div>
 
+            {/* Numeric Metric Switch for Project */}
+            <div className="p-3 bg-stone-50 rounded-2xl border border-stone-200/80">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-stone-800">
+                  この手段の数値目標を設定する
+                </label>
+                <input
+                  type="checkbox"
+                  checked={newProjHasMetric}
+                  onChange={(e) => setNewProjHasMetric(e.target.checked)}
+                  className="w-4 h-4 accent-indigo-600"
+                />
+              </div>
+
+              {newProjHasMetric && (
+                <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-stone-200/60">
+                  <div>
+                    <label className="block text-[10px] font-bold text-stone-600 mb-0.5">目標数値</label>
+                    <Input
+                      type="number"
+                      value={newProjMetricTarget}
+                      onChange={(e) => setNewProjMetricTarget(e.target.value)}
+                      placeholder="例: 500000"
+                      className="text-xs rounded-xl"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-stone-600 mb-0.5">単位</label>
+                    <Input
+                      value={newProjMetricUnit}
+                      onChange={(e) => setNewProjMetricUnit(e.target.value)}
+                      placeholder="円 / ページ / 件"
+                      className="text-xs rounded-xl"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Quick Project Idea Chips */}
             <div>
               <label className="block text-[10px] font-black text-stone-400 uppercase tracking-widest mb-1.5">
@@ -1166,7 +1546,7 @@ export default function StoryPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="py-2 text-left space-y-2">
+          <div className="py-2 text-left space-y-3">
             <div>
               <label className="block text-xs font-bold text-stone-700 mb-1">マイルストーン名</label>
               <Input
@@ -1175,6 +1555,45 @@ export default function StoryPage() {
                 placeholder="例: ① 開発のための学習・インプット"
                 className="text-xs rounded-xl font-bold"
               />
+            </div>
+
+            {/* Numeric Metric Switch for Milestone */}
+            <div className="p-3 bg-stone-50 rounded-2xl border border-stone-200/80">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-stone-800">
+                  この工程の数値目標を設定する
+                </label>
+                <input
+                  type="checkbox"
+                  checked={newMsHasMetric}
+                  onChange={(e) => setNewMsHasMetric(e.target.checked)}
+                  className="w-4 h-4 accent-teal-600"
+                />
+              </div>
+
+              {newMsHasMetric && (
+                <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-stone-200/60">
+                  <div>
+                    <label className="block text-[10px] font-bold text-stone-600 mb-0.5">目標数値</label>
+                    <Input
+                      type="number"
+                      value={newMsMetricTarget}
+                      onChange={(e) => setNewMsMetricTarget(e.target.value)}
+                      placeholder="例: 100"
+                      className="text-xs rounded-xl"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-stone-600 mb-0.5">単位</label>
+                    <Input
+                      value={newMsMetricUnit}
+                      onChange={(e) => setNewMsMetricUnit(e.target.value)}
+                      placeholder="ページ / 時間"
+                      className="text-xs rounded-xl"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -1370,7 +1789,7 @@ export default function StoryPage() {
               大目標（Level 1）を編集
             </DialogTitle>
             <DialogDescription className="text-xs font-medium text-stone-500">
-              目標のタイトルや詳細を変更します。
+              目標のタイトルや数値目標を変更します。
             </DialogDescription>
           </DialogHeader>
 
@@ -1390,8 +1809,59 @@ export default function StoryPage() {
                 value={editStoryDesc}
                 onChange={(e) => setEditStoryDesc(e.target.value)}
                 placeholder="例: 経済的自立と自由な時間の獲得"
-                className="text-xs min-h-[80px] resize-none rounded-xl"
+                className="text-xs min-h-[70px] resize-none rounded-xl"
               />
+            </div>
+
+            {/* Numeric Metric Switch for Edit Story */}
+            <div className="p-3 bg-stone-50 rounded-2xl border border-stone-200/80">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-stone-800">
+                  大目標の数値目標を設定する
+                </label>
+                <input
+                  type="checkbox"
+                  checked={editStoryHasMetric}
+                  onChange={(e) => setEditStoryHasMetric(e.target.checked)}
+                  className="w-4 h-4 accent-emerald-600"
+                />
+              </div>
+
+              {editStoryHasMetric && (
+                <div className="space-y-2 mt-2 pt-2 border-t border-stone-200/60">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[10px] font-bold text-stone-600 mb-0.5">目標数値</label>
+                      <Input
+                        type="number"
+                        value={editStoryMetricTarget}
+                        onChange={(e) => setEditStoryMetricTarget(e.target.value)}
+                        placeholder="例: 1000000"
+                        className="text-xs rounded-xl"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-stone-600 mb-0.5">単位</label>
+                      <Input
+                        value={editStoryMetricUnit}
+                        onChange={(e) => setEditStoryMetricUnit(e.target.value)}
+                        placeholder="円 / ページ / 件"
+                        className="text-xs rounded-xl"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-stone-600 mb-0.5">現在の累計数値</label>
+                    <Input
+                      type="number"
+                      value={editStoryMetricCurrent}
+                      onChange={(e) => setEditStoryMetricCurrent(e.target.value)}
+                      placeholder="例: 0"
+                      className="text-xs rounded-xl"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -1425,11 +1895,11 @@ export default function StoryPage() {
               達成手段（Level 2）を編集
             </DialogTitle>
             <DialogDescription className="text-xs font-medium text-stone-500">
-              手段・プロジェクトの内容を変更します。
+              手段・プロジェクトの内容や数値目標を変更します。
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-3 py-2 text-left">
+          <div className="space-y-3 py-2 text-left max-h-[60vh] overflow-y-auto pr-1">
             <div>
               <label className="block text-xs font-bold text-stone-700 mb-1">手段・プロジェクト名</label>
               <Input
@@ -1445,8 +1915,59 @@ export default function StoryPage() {
                 value={editProjectDesc}
                 onChange={(e) => setEditProjectDesc(e.target.value)}
                 placeholder="例: Web/スマホアプリを開発・公開し、ストック収益を作る"
-                className="text-xs min-h-[60px] resize-none rounded-xl"
+                className="text-xs min-h-[50px] resize-none rounded-xl"
               />
+            </div>
+
+            {/* Numeric Metric Switch for Edit Project */}
+            <div className="p-3 bg-stone-50 rounded-2xl border border-stone-200/80">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-stone-800">
+                  この手段の数値目標を設定する
+                </label>
+                <input
+                  type="checkbox"
+                  checked={editProjHasMetric}
+                  onChange={(e) => setEditProjHasMetric(e.target.checked)}
+                  className="w-4 h-4 accent-indigo-600"
+                />
+              </div>
+
+              {editProjHasMetric && (
+                <div className="space-y-2 mt-2 pt-2 border-t border-stone-200/60">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[10px] font-bold text-stone-600 mb-0.5">目標数値</label>
+                      <Input
+                        type="number"
+                        value={editProjMetricTarget}
+                        onChange={(e) => setEditProjMetricTarget(e.target.value)}
+                        placeholder="例: 500000"
+                        className="text-xs rounded-xl"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-stone-600 mb-0.5">単位</label>
+                      <Input
+                        value={editProjMetricUnit}
+                        onChange={(e) => setEditProjMetricUnit(e.target.value)}
+                        placeholder="円 / ページ / 件"
+                        className="text-xs rounded-xl"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-stone-600 mb-0.5">現在の累計数値</label>
+                    <Input
+                      type="number"
+                      value={editProjMetricCurrent}
+                      onChange={(e) => setEditProjMetricCurrent(e.target.value)}
+                      placeholder="例: 0"
+                      className="text-xs rounded-xl"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -1477,11 +1998,11 @@ export default function StoryPage() {
               工程（Level 3 マイルストーン）を編集
             </DialogTitle>
             <DialogDescription className="text-xs font-medium text-stone-500">
-              工程のタイトルを変更します。
+              工程のタイトルや数値目標を変更します。
             </DialogDescription>
           </DialogHeader>
 
-          <div className="py-2 text-left space-y-2">
+          <div className="py-2 text-left space-y-3">
             <div>
               <label className="block text-xs font-bold text-stone-700 mb-1">マイルストーン名</label>
               <Input
@@ -1490,6 +2011,57 @@ export default function StoryPage() {
                 placeholder="例: ① 開発のための学習・インプット"
                 className="text-xs rounded-xl font-bold"
               />
+            </div>
+
+            {/* Numeric Metric Switch for Edit Milestone */}
+            <div className="p-3 bg-stone-50 rounded-2xl border border-stone-200/80">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-stone-800">
+                  この工程の数値目標を設定する
+                </label>
+                <input
+                  type="checkbox"
+                  checked={editMsHasMetric}
+                  onChange={(e) => setEditMsHasMetric(e.target.checked)}
+                  className="w-4 h-4 accent-teal-600"
+                />
+              </div>
+
+              {editMsHasMetric && (
+                <div className="space-y-2 mt-2 pt-2 border-t border-stone-200/60">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[10px] font-bold text-stone-600 mb-0.5">目標数値</label>
+                      <Input
+                        type="number"
+                        value={editMsMetricTarget}
+                        onChange={(e) => setEditMsMetricTarget(e.target.value)}
+                        placeholder="例: 100"
+                        className="text-xs rounded-xl"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-stone-600 mb-0.5">単位</label>
+                      <Input
+                        value={editMsMetricUnit}
+                        onChange={(e) => setEditMsMetricUnit(e.target.value)}
+                        placeholder="ページ / 時間"
+                        className="text-xs rounded-xl"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-stone-600 mb-0.5">現在の累計数値</label>
+                    <Input
+                      type="number"
+                      value={editMsMetricCurrent}
+                      onChange={(e) => setEditMsMetricCurrent(e.target.value)}
+                      placeholder="例: 0"
+                      className="text-xs rounded-xl"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -1640,11 +2212,11 @@ export default function StoryPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Progress & WHY Modals */}
+      {/* Universal Metric Progress & WHY Modals */}
       <MetricProgressModal
-        quest={progressQuest}
-        isOpen={!!progressQuest}
-        onClose={() => setProgressQuest(null)}
+        targetItem={targetMetricItem}
+        isOpen={!!targetMetricItem}
+        onClose={() => setTargetMetricItem(null)}
         onProgressUpdated={() => loadData()}
       />
 

@@ -248,6 +248,172 @@ export const storage = {
     return { quest: target, isCompleted };
   },
 
+  // Level 1: Story Metric Updater
+  updateStoryMetric: (
+    storyId: string,
+    value: number,
+    isAbsolute = false,
+    note?: string
+  ): { story: MainStory | null; isCompleted: boolean } => {
+    const stories = storage.getStories();
+    const target = stories.find(s => s.id === storyId);
+    if (!target || !target.metric) return { story: null, isCompleted: false };
+
+    const oldVal = target.metric.currentValue || 0;
+    const newVal = isAbsolute ? Math.max(0, value) : Math.max(0, oldVal + value);
+    const amountAdded = isAbsolute ? (newVal - oldVal) : value;
+
+    const logEntry = {
+      id: `mpl_${Date.now()}`,
+      date: Date.now(),
+      amountAdded,
+      totalAfter: newVal,
+      note: note?.trim() || undefined
+    };
+
+    const history = target.metric.history || [];
+    target.metric.currentValue = newVal;
+    target.metric.history = [logEntry, ...history];
+
+    const isCompleted = newVal >= target.metric.targetValue;
+    target.progress = Math.min(100, Math.round((newVal / target.metric.targetValue) * 100));
+    target.updatedAt = Date.now();
+
+    storage.saveStories(stories);
+
+    storage.addStoryLog({
+      id: `log_${Date.now()}`,
+      date: Date.now(),
+      type: "metric_progress_updated",
+      title: `大目標進捗記録: ${target.title}`,
+      description: `${amountAdded >= 0 ? `+${amountAdded}` : amountAdded} ${target.metric.unit} （累計: ${newVal}/${target.metric.targetValue} ${target.metric.unit}）${note ? ` - ${note}` : ""}`,
+      storyId: target.id,
+      metadata: {
+        amountAdded,
+        totalAfter: newVal,
+        targetValue: target.metric.targetValue,
+        unit: target.metric.unit,
+        note
+      }
+    });
+
+    return { story: target, isCompleted };
+  },
+
+  // Level 2: Project Metric Updater
+  updateProjectMetric: (
+    projectId: string,
+    value: number,
+    isAbsolute = false,
+    note?: string
+  ): { project: GoalProject | null; isCompleted: boolean } => {
+    const projects = storage.getProjects();
+    const target = projects.find(p => p.id === projectId);
+    if (!target || !target.metric) return { project: null, isCompleted: false };
+
+    const oldVal = target.metric.currentValue || 0;
+    const newVal = isAbsolute ? Math.max(0, value) : Math.max(0, oldVal + value);
+    const amountAdded = isAbsolute ? (newVal - oldVal) : value;
+
+    const logEntry = {
+      id: `mpl_${Date.now()}`,
+      date: Date.now(),
+      amountAdded,
+      totalAfter: newVal,
+      note: note?.trim() || undefined
+    };
+
+    const history = target.metric.history || [];
+    target.metric.currentValue = newVal;
+    target.metric.history = [logEntry, ...history];
+
+    const isCompleted = newVal >= target.metric.targetValue;
+    target.progress = Math.min(100, Math.round((newVal / target.metric.targetValue) * 100));
+    target.updatedAt = Date.now();
+
+    storage.saveProjects(projects);
+
+    storage.addStoryLog({
+      id: `log_${Date.now()}`,
+      date: Date.now(),
+      type: "metric_progress_updated",
+      title: `プロジェクト進捗記録: ${target.title}`,
+      description: `${amountAdded >= 0 ? `+${amountAdded}` : amountAdded} ${target.metric.unit} （累計: ${newVal}/${target.metric.targetValue} ${target.metric.unit}）${note ? ` - ${note}` : ""}`,
+      projectId: target.id,
+      storyId: target.storyId,
+      metadata: {
+        amountAdded,
+        totalAfter: newVal,
+        targetValue: target.metric.targetValue,
+        unit: target.metric.unit,
+        note
+      }
+    });
+
+    storage.recalculateStoryProgress(target.storyId);
+    return { project: target, isCompleted };
+  },
+
+  // Level 3: Milestone Metric Updater
+  updateMilestoneMetric: (
+    milestoneId: string,
+    value: number,
+    isAbsolute = false,
+    note?: string
+  ): { milestone: Milestone | null; isCompleted: boolean } => {
+    const milestones = storage.getMilestones();
+    const target = milestones.find(m => m.id === milestoneId);
+    if (!target || !target.metric) return { milestone: null, isCompleted: false };
+
+    const oldVal = target.metric.currentValue || 0;
+    const newVal = isAbsolute ? Math.max(0, value) : Math.max(0, oldVal + value);
+    const amountAdded = isAbsolute ? (newVal - oldVal) : value;
+
+    const logEntry = {
+      id: `mpl_${Date.now()}`,
+      date: Date.now(),
+      amountAdded,
+      totalAfter: newVal,
+      note: note?.trim() || undefined
+    };
+
+    const history = target.metric.history || [];
+    target.metric.currentValue = newVal;
+    target.metric.history = [logEntry, ...history];
+
+    const isCompleted = newVal >= target.metric.targetValue;
+    if (isCompleted) {
+      target.status = "completed";
+    }
+
+    storage.saveMilestones(milestones);
+
+    storage.addStoryLog({
+      id: `log_${Date.now()}`,
+      date: Date.now(),
+      type: "metric_progress_updated",
+      title: `マイルストーン進捗記録: ${target.title}`,
+      description: `${amountAdded >= 0 ? `+${amountAdded}` : amountAdded} ${target.metric.unit} （累計: ${newVal}/${target.metric.targetValue} ${target.metric.unit}）${note ? ` - ${note}` : ""}`,
+      projectId: target.projectId,
+      metadata: {
+        amountAdded,
+        totalAfter: newVal,
+        targetValue: target.metric.targetValue,
+        unit: target.metric.unit,
+        note
+      }
+    });
+
+    if (target.projectId) {
+      const proj = storage.getProjects().find(p => p.id === target.projectId);
+      if (proj?.storyId) {
+        storage.recalculateStoryProgress(proj.storyId);
+      }
+    }
+
+    return { milestone: target, isCompleted };
+  },
+
   // Dynamic Cascade Progress Recalculator
   recalculateStoryProgress: (storyId: string) => {
     const allProjects = storage.getProjects();
@@ -257,6 +423,13 @@ export const storage = {
     // Update each project's progress
     const updatedProjects = allProjects.map(proj => {
       if (proj.storyId !== storyId) return proj;
+      
+      // If project has direct metric, use it
+      if (proj.metric && proj.metric.targetValue > 0) {
+        const progress = Math.min(100, Math.round((proj.metric.currentValue / proj.metric.targetValue) * 100));
+        return { ...proj, progress, updatedAt: Date.now() };
+      }
+
       const projQuests = storyQuests.filter(q => q.projectId === proj.id);
       if (projQuests.length === 0) return { ...proj, progress: 0 };
 
@@ -278,7 +451,11 @@ export const storage = {
     const story = allStories.find(s => s.id === storyId);
     if (story) {
       let storyProgress = 0;
-      if (storyQuests.length > 0) {
+
+      // If story has direct metric, use it
+      if (story.metric && story.metric.targetValue > 0) {
+        storyProgress = Math.min(100, Math.round((story.metric.currentValue / story.metric.targetValue) * 100));
+      } else if (storyQuests.length > 0) {
         let totalPercent = 0;
         storyQuests.forEach(q => {
           if (q.status === "completed") {
@@ -288,7 +465,14 @@ export const storage = {
           }
         });
         storyProgress = Math.min(100, Math.round(totalPercent / storyQuests.length));
+      } else {
+        const storyProjects = updatedProjects.filter(p => p.storyId === storyId);
+        if (storyProjects.length > 0) {
+          const totalProjProgress = storyProjects.reduce((sum, p) => sum + p.progress, 0);
+          storyProgress = Math.min(100, Math.round(totalProjProgress / storyProjects.length));
+        }
       }
+
       const updatedStories = allStories.map(s => s.id === storyId ? { ...s, progress: storyProgress, updatedAt: Date.now() } : s);
       set("stories", updatedStories);
     }

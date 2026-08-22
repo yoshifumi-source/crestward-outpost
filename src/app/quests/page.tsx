@@ -20,7 +20,10 @@ import {
   FolderKanban,
   ArrowLeft,
   BookOpen,
-  Crown
+  Crown,
+  GripVertical,
+  ArrowUp,
+  ArrowDown
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { QuestCompletionModal } from "@/components/QuestCompletionModal";
@@ -57,6 +60,9 @@ export default function QuestsPage() {
   const [hasMetric, setHasMetric] = useState(false);
   const [newMetricTarget, setNewMetricTarget] = useState("");
   const [newMetricUnit, setNewMetricUnit] = useState("ページ");
+
+  // Drag & Drop Reorder State
+  const [draggedQuestId, setDraggedQuestId] = useState<string | null>(null);
 
   // Edit Quest State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -195,6 +201,51 @@ export default function QuestsPage() {
       storage.deleteQuest(quest.id);
       loadData();
     }
+  };
+
+  const handleMoveQuest = (questId: string, direction: "up" | "down", list: Quest[]) => {
+    const idx = list.findIndex(q => q.id === questId);
+    if (idx < 0) return;
+    const targetIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (targetIdx < 0 || targetIdx >= list.length) return;
+
+    const allQuests = storage.getQuests();
+    const itemA = list[idx];
+    const itemB = list[targetIdx];
+
+    const idxAInAll = allQuests.findIndex(q => q.id === itemA.id);
+    const idxBInAll = allQuests.findIndex(q => q.id === itemB.id);
+
+    if (idxAInAll >= 0 && idxBInAll >= 0) {
+      const updated = [...allQuests];
+      updated[idxAInAll] = itemB;
+      updated[idxBInAll] = itemA;
+      storage.saveQuests(updated);
+      setQuests(updated);
+    }
+  };
+
+  const handleQuestDrop = (targetQuestId: string, list: Quest[]) => {
+    if (!draggedQuestId || draggedQuestId === targetQuestId) return;
+    const sourceIdx = list.findIndex(q => q.id === draggedQuestId);
+    const targetIdx = list.findIndex(q => q.id === targetQuestId);
+    if (sourceIdx < 0 || targetIdx < 0) return;
+
+    const allQuests = storage.getQuests();
+    const sourceItem = list[sourceIdx];
+    const targetItem = list[targetIdx];
+
+    const sourceInAll = allQuests.findIndex(q => q.id === sourceItem.id);
+    const targetInAll = allQuests.findIndex(q => q.id === targetItem.id);
+
+    if (sourceInAll >= 0 && targetInAll >= 0) {
+      const updated = [...allQuests];
+      const [removed] = updated.splice(sourceInAll, 1);
+      updated.splice(targetInAll, 0, removed);
+      storage.saveQuests(updated);
+      setQuests(updated);
+    }
+    setDraggedQuestId(null);
   };
 
   const handleAddQuickQuest = () => {
@@ -376,7 +427,7 @@ export default function QuestsPage() {
             </Button>
           </div>
         ) : (
-          filteredQuests.map((quest) => {
+          filteredQuests.map((quest, index) => {
             const isCompleted = quest.status === "completed";
             const story = stories.find(s => s.id === quest.storyId);
             const proj = projects.find(p => p.id === quest.projectId);
@@ -395,36 +446,76 @@ export default function QuestsPage() {
             return (
               <div 
                 key={quest.id}
+                draggable
+                onDragStart={() => setDraggedQuestId(quest.id)}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={() => handleQuestDrop(quest.id, filteredQuests)}
                 className={`glass-panel p-4 rounded-2xl border transition-all ${
+                  draggedQuestId === quest.id ? "opacity-40 border-dashed border-stone-400" : ""
+                } ${
                   isCompleted 
                     ? "bg-stone-50/60 border-stone-200/50 opacity-70" 
                     : "border-stone-200/90 shadow-sm hover:shadow-md"
                 }`}
               >
                 <div className="flex justify-between items-start gap-2 mb-2">
-                  <div>
-                    {/* Story & Project Hierarchy Tag */}
-                    <div className="flex items-center gap-1.5 flex-wrap mb-1">
-                      {story && (
-                        <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 font-mono text-[9px] font-black border border-emerald-200/60">
-                          <Crown className="w-2.5 h-2.5 text-amber-500" /> {story.title}
-                        </span>
-                      )}
-                      {proj && (
-                        <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-mono text-[9px] font-black border border-indigo-200/60">
-                          <FolderKanban className="w-2.5 h-2.5" /> {proj.title}
-                        </span>
-                      )}
-                      {ms && (
-                        <span className="inline-block px-2 py-0.5 rounded bg-stone-100 text-stone-500 font-mono text-[9px] font-black">
-                          {ms.title}
-                        </span>
-                      )}
+                  <div className="flex items-start gap-2 flex-1">
+                    {/* Drag Handle & Reorder buttons */}
+                    <div className="flex items-center gap-0.5 text-stone-300 mt-1 select-none shrink-0">
+                      <span 
+                        className="cursor-grab active:cursor-grabbing hover:text-stone-600 p-0.5" 
+                        title="ドラッグして並べ替え"
+                      >
+                        <GripVertical className="w-4 h-4" />
+                      </span>
+                      <div className="flex flex-col">
+                        {index > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => handleMoveQuest(quest.id, "up", filteredQuests)}
+                            className="hover:text-stone-700 p-0.2"
+                            title="上へ移動"
+                          >
+                            <ArrowUp className="w-2.5 h-2.5" />
+                          </button>
+                        )}
+                        {index < filteredQuests.length - 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleMoveQuest(quest.id, "down", filteredQuests)}
+                            className="hover:text-stone-700 p-0.2"
+                            title="下へ移動"
+                          >
+                            <ArrowDown className="w-2.5 h-2.5" />
+                          </button>
+                        )}
+                      </div>
                     </div>
 
-                    <h3 className={`font-black text-sm leading-snug ${isCompleted ? 'text-stone-500 line-through' : 'text-stone-800'}`}>
-                      {quest.title}
-                    </h3>
+                    <div className="flex-1">
+                      {/* Story & Project Hierarchy Tag */}
+                      <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                        {story && (
+                          <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 font-mono text-[9px] font-black border border-emerald-200/60">
+                            <Crown className="w-2.5 h-2.5 text-amber-500" /> {story.title}
+                          </span>
+                        )}
+                        {proj && (
+                          <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-mono text-[9px] font-black border border-indigo-200/60">
+                            <FolderKanban className="w-2.5 h-2.5" /> {proj.title}
+                          </span>
+                        )}
+                        {ms && (
+                          <span className="inline-block px-2 py-0.5 rounded bg-stone-100 text-stone-500 font-mono text-[9px] font-black">
+                            {ms.title}
+                          </span>
+                        )}
+                      </div>
+
+                      <h3 className={`font-black text-sm leading-snug ${isCompleted ? 'text-stone-500 line-through' : 'text-stone-800'}`}>
+                        {quest.title}
+                      </h3>
+                    </div>
                   </div>
 
                   {/* Card Actions (Edit, WHY & Delete) */}

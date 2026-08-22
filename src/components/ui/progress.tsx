@@ -1,38 +1,51 @@
 "use client"
 
-import { Progress as ProgressPrimitive } from "@base-ui/react/progress"
-
+import * as React from "react"
 import { cn } from "@/lib/utils"
+
+export interface ProgressProps extends React.HTMLAttributes<HTMLDivElement> {
+  value?: number
+  indicatorClassName?: string
+}
 
 function Progress({
   className,
-  children,
-  value,
+  value = 0,
+  indicatorClassName,
   ...props
-}: ProgressPrimitive.Root.Props) {
+}: ProgressProps) {
+  const safeValue = Math.min(100, Math.max(0, Number(value) || 0))
+
   return (
-    <ProgressPrimitive.Root
-      value={value}
-      data-slot="progress"
-      className={cn("flex flex-wrap gap-3", className)}
+    <div
+      role="progressbar"
+      aria-valuenow={safeValue}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      className={cn(
+        "relative h-2 w-full overflow-hidden rounded-full bg-stone-200/80 shadow-inner",
+        className
+      )}
       {...props}
     >
-      {children}
-      <ProgressTrack>
-        <ProgressIndicator />
-      </ProgressTrack>
-    </ProgressPrimitive.Root>
+      <div
+        className={cn(
+          "h-full bg-emerald-600 transition-all duration-500 ease-out rounded-full",
+          indicatorClassName
+        )}
+        style={{ width: `${safeValue}%` }}
+      />
+    </div>
   )
 }
 
-function ProgressTrack({ className, ...props }: ProgressPrimitive.Track.Props) {
+function ProgressTrack({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <ProgressPrimitive.Track
+    <div
       className={cn(
-        "relative flex h-1 w-full items-center overflow-x-hidden rounded-full bg-muted",
+        "relative flex h-1 w-full items-center overflow-x-hidden rounded-full bg-stone-200/80",
         className
       )}
-      data-slot="progress-track"
       {...props}
     />
   )
@@ -40,44 +53,16 @@ function ProgressTrack({ className, ...props }: ProgressPrimitive.Track.Props) {
 
 function ProgressIndicator({
   className,
+  style,
   ...props
-}: ProgressPrimitive.Indicator.Props) {
+}: React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <ProgressPrimitive.Indicator
-      data-slot="progress-indicator"
-      className={cn("h-full bg-primary transition-all", className)}
+    <div
+      className={cn("h-full bg-emerald-600 transition-all rounded-full", className)}
+      style={style}
       {...props}
     />
   )
 }
 
-function ProgressLabel({ className, ...props }: ProgressPrimitive.Label.Props) {
-  return (
-    <ProgressPrimitive.Label
-      className={cn("text-sm font-medium", className)}
-      data-slot="progress-label"
-      {...props}
-    />
-  )
-}
-
-function ProgressValue({ className, ...props }: ProgressPrimitive.Value.Props) {
-  return (
-    <ProgressPrimitive.Value
-      className={cn(
-        "ml-auto text-sm text-muted-foreground tabular-nums",
-        className
-      )}
-      data-slot="progress-value"
-      {...props}
-    />
-  )
-}
-
-export {
-  Progress,
-  ProgressTrack,
-  ProgressIndicator,
-  ProgressLabel,
-  ProgressValue,
-}
+export { Progress, ProgressTrack, ProgressIndicator }
