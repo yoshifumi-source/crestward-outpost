@@ -298,11 +298,11 @@ export function MetricProgressModal({
           </div>
         )}
 
-        <DialogFooter className="flex flex-col gap-2 mt-1">
+        <DialogFooter className="flex flex-col gap-2 mt-2">
           <Button
             onClick={handleSave}
             disabled={!inputValue || isNaN(num) || (mode === "add" && num <= 0)}
-            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl py-5 font-bold text-xs shadow-md"
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl py-3 text-xs font-bold shadow-md"
           >
             <CheckCircle2 className="w-4 h-4 mr-1.5" />
             進捗を記録する
