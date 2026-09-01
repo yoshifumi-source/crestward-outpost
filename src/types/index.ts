@@ -78,6 +78,14 @@ export type QuestMetric = {
   history?: MetricProgressLog[];
 };
 
+export type SubTask = {
+  id: string;
+  title: string;
+  completed: boolean;
+  createdAt: number;
+  completedAt?: number;
+};
+
 export type Quest = {
   id: string;
   title: string;
@@ -94,6 +102,7 @@ export type Quest = {
   goldReward: number;
   skillTags: string[];
   metric?: QuestMetric;
+  subTasks?: SubTask[];
   dueDate?: number;
   completedAt?: number;
   createdAt: number;

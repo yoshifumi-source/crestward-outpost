@@ -34,11 +34,17 @@ import {
   GripVertical,
   ArrowUp,
   ArrowDown,
-  BarChart3
+  BarChart3,
+  RotateCcw,
+  ListChecks,
+  ChevronUp,
+  CheckSquare,
+  Square
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { MetricProgressModal } from "@/components/MetricProgressModal";
 import { WhyExplanationModal } from "@/components/WhyExplanationModal";
+import { SubTask } from "@/types";
 
 const GOAL_IDEAS = [
   { title: "お金に不自由しない生活（副業で年収100万円アップ）", desc: "自作アプリや講演、物販など複数の収益トラックを確立する" },
@@ -155,6 +161,11 @@ export default function StoryPage() {
 
   // Drag & Drop Reorder State
   const [draggedQuestId, setDraggedQuestId] = useState<string | null>(null);
+
+  // SubTasks & Completed Quests Visibility State
+  const [openCompletedMilestones, setOpenCompletedMilestones] = useState<Record<string, boolean>>({});
+  const [expandedSubTaskQuests, setExpandedSubTaskQuests] = useState<Record<string, boolean>>({});
+  const [newSubTaskInputs, setNewSubTaskInputs] = useState<Record<string, string>>({});
 
   // Universal Metric Progress & WHY Modals
   const [targetMetricItem, setTargetMetricItem] = useState<{
@@ -643,6 +654,55 @@ export default function StoryPage() {
     }
   };
 
+  const toggleCompletedMs = (msId: string) => {
+    setOpenCompletedMilestones(prev => ({ ...prev, [msId]: !prev[msId] }));
+  };
+
+  const toggleSubTasksExpanded = (questId: string) => {
+    setExpandedSubTaskQuests(prev => ({ ...prev, [questId]: !prev[questId] }));
+  };
+
+  const handleAddSubTask = (questId: string) => {
+    const text = newSubTaskInputs[questId]?.trim();
+    if (!text) return;
+    storage.addSubTask(questId, text);
+    setNewSubTaskInputs(prev => ({ ...prev, [questId]: "" }));
+    setExpandedSubTaskQuests(prev => ({ ...prev, [questId]: true }));
+    loadData();
+  };
+
+  const handleToggleSubTask = (questId: string, subTaskId: string) => {
+    storage.toggleSubTask(questId, subTaskId);
+    loadData();
+  };
+
+  const handleDeleteSubTask = (questId: string, subTaskId: string) => {
+    storage.deleteSubTask(questId, subTaskId);
+    loadData();
+  };
+
+  const handleReopenQuest = (questId: string) => {
+    storage.reopenQuest(questId);
+    loadData();
+  };
+
+  const handleCompleteQuest = (quest: Quest) => {
+    const st = storage.getSettings();
+    if (st.currentMp < quest.mpCost) {
+      alert(`MPが足りません（必要MP: ${quest.mpCost} / 現在MP: ${st.currentMp}）。`);
+      return;
+    }
+    st.currentMp = Math.max(0, st.currentMp - quest.mpCost);
+    storage.saveSettings(st);
+
+    const allQuests = storage.getQuests();
+    const updated = allQuests.map(q => q.id === quest.id ? { ...q, status: "completed" as const, completedAt: Date.now() } : q);
+    storage.saveQuests(updated);
+    storage.addExperience(quest.xpReward);
+    storage.addGold(quest.goldReward);
+    loadData();
+  };
+
   const handlePivot = () => {
     const currentStory = stories.find(s => s.id === selectedStoryId);
     if (!currentStory || !pivotReason.trim()) return;
@@ -1119,126 +1179,353 @@ export default function StoryPage() {
                                 <Progress value={msPercent} className="h-1.5 bg-stone-200 *:bg-teal-600" />
                               )}
 
-                              {/* Level 4: Quests List inside Milestone with Drag & Drop Reordering */}
-                              <div className="space-y-1.5 pt-1">
-                                {msQuests.map((q, qIdx) => {
-                                  const isComp = q.status === "completed";
-                                  const metric = q.metric;
-                                  const percent = metric ? Math.min(100, Math.round((metric.currentValue / metric.targetValue) * 100)) : null;
+                              {/* Level 4: Quests List inside Milestone with Drag & Drop Reordering and SubTasks */}
+                              {(() => {
+                                const activeMsQuests = msQuests.filter(q => q.status !== "completed");
+                                const completedMsQuests = msQuests.filter(q => q.status === "completed");
+                                const isCompletedOpen = !!openCompletedMilestones[ms.id];
 
-                                  return (
-                                    <div 
-                                      key={q.id}
-                                      draggable
-                                      onDragStart={() => setDraggedQuestId(q.id)}
-                                      onDragOver={(e) => e.preventDefault()}
-                                      onDrop={() => handleQuestDrop(q.id, msQuests)}
-                                      className={`p-2.5 rounded-xl border transition-all ${
-                                        draggedQuestId === q.id ? "opacity-40 border-dashed border-stone-400" : ""
-                                      } ${
-                                        isComp 
-                                          ? "bg-white/50 border-stone-200/50 opacity-60 line-through text-stone-400" 
-                                          : "bg-white border-stone-200/90 shadow-2xs hover:border-emerald-300"
-                                      }`}
-                                    >
-                                      <div className="flex justify-between items-start gap-2">
-                                        <div className="flex items-start gap-1.5 flex-1">
-                                          {/* Drag Handle & Reorder buttons */}
-                                          <div className="flex items-center gap-0.5 text-stone-300 mr-0.5 select-none shrink-0">
-                                            <span 
-                                              className="cursor-grab active:cursor-grabbing hover:text-stone-600 p-0.5" 
-                                              title="ドラッグして並べ替え"
-                                            >
-                                              <GripVertical className="w-3.5 h-3.5" />
-                                            </span>
-                                            <div className="flex flex-col">
-                                              {qIdx > 0 && (
+                                return (
+                                  <div className="space-y-2 pt-1">
+                                    {/* Active Quests */}
+                                    {activeMsQuests.length === 0 && completedMsQuests.length === 0 ? (
+                                      <div className="text-center py-3 bg-white/40 rounded-xl border border-dashed border-stone-200">
+                                        <p className="text-[11px] text-stone-400 font-medium">
+                                          まだクエストがありません。「+ クエスト追加」で実行タスクを作成しましょう！
+                                        </p>
+                                      </div>
+                                    ) : (
+                                      activeMsQuests.map((q, qIdx) => {
+                                        const metric = q.metric;
+                                        const percent = metric ? Math.min(100, Math.round((metric.currentValue / metric.targetValue) * 100)) : null;
+                                        const subTasks = q.subTasks || [];
+                                        const subCompCount = subTasks.filter(st => st.completed).length;
+                                        const isSubExpanded = !!expandedSubTaskQuests[q.id];
+                                        const currentSubInput = newSubTaskInputs[q.id] || "";
+
+                                        return (
+                                          <div 
+                                            key={q.id}
+                                            draggable
+                                            onDragStart={() => setDraggedQuestId(q.id)}
+                                            onDragOver={(e) => e.preventDefault()}
+                                            onDrop={() => handleQuestDrop(q.id, activeMsQuests)}
+                                            className={`p-3 rounded-2xl border transition-all ${
+                                              draggedQuestId === q.id ? "opacity-40 border-dashed border-stone-400" : ""
+                                            } bg-white border-stone-200/90 shadow-2xs hover:border-emerald-300`}
+                                          >
+                                            <div className="flex justify-between items-start gap-2">
+                                              <div className="flex items-start gap-2 flex-1">
+                                                {/* Drag Handle & Reorder buttons */}
+                                                <div className="flex items-center gap-0.5 text-stone-300 mr-0.5 select-none shrink-0 mt-0.5">
+                                                  <span 
+                                                    className="cursor-grab active:cursor-grabbing hover:text-stone-600 p-0.5" 
+                                                    title="ドラッグして並べ替え"
+                                                  >
+                                                    <GripVertical className="w-3.5 h-3.5" />
+                                                  </span>
+                                                  <div className="flex flex-col">
+                                                    {qIdx > 0 && (
+                                                      <button
+                                                        type="button"
+                                                        onClick={() => handleMoveQuest(q.id, "up", activeMsQuests)}
+                                                        className="hover:text-stone-700 p-0.2"
+                                                        title="上へ移動"
+                                                      >
+                                                        <ArrowUp className="w-2.5 h-2.5" />
+                                                      </button>
+                                                    )}
+                                                    {qIdx < activeMsQuests.length - 1 && (
+                                                      <button
+                                                        type="button"
+                                                        onClick={() => handleMoveQuest(q.id, "down", activeMsQuests)}
+                                                        className="hover:text-stone-700 p-0.2"
+                                                        title="下へ移動"
+                                                      >
+                                                        <ArrowDown className="w-2.5 h-2.5" />
+                                                      </button>
+                                                    )}
+                                                  </div>
+                                                </div>
+
+                                                {/* Complete button */}
                                                 <button
                                                   type="button"
-                                                  onClick={() => handleMoveQuest(q.id, "up", msQuests)}
-                                                  className="hover:text-stone-700 p-0.2"
-                                                  title="上へ移動"
+                                                  onClick={() => handleCompleteQuest(q)}
+                                                  className="p-0.5 text-stone-400 hover:text-emerald-600 transition-colors shrink-0 mt-0.5"
+                                                  title="クエストを達成・完了する"
                                                 >
-                                                  <ArrowUp className="w-2.5 h-2.5" />
+                                                  <Circle className="w-4 h-4 hover:scale-110 transition-transform" />
                                                 </button>
-                                              )}
-                                              {qIdx < msQuests.length - 1 && (
+
+                                                <div className="flex-1 min-w-0">
+                                                  <span className="text-xs font-black text-stone-800 leading-snug block">
+                                                    {q.title}
+                                                  </span>
+                                                  {q.description && (
+                                                    <span className="text-[11px] text-stone-500 line-clamp-2 mt-0.5 block leading-relaxed">
+                                                      {q.description}
+                                                    </span>
+                                                  )}
+                                                </div>
+                                              </div>
+
+                                              <div className="flex items-center gap-1 shrink-0">
+                                                <button
+                                                  onClick={() => handleOpenEditQuest(q)}
+                                                  className="p-1.5 text-stone-400 hover:text-stone-700 rounded-lg hover:bg-stone-100"
+                                                  title="クエストを編集"
+                                                >
+                                                  <Edit3 className="w-3.5 h-3.5" />
+                                                </button>
+                                                <button
+                                                  onClick={() => setWhyQuest(q)}
+                                                  className="p-1.5 text-stone-400 hover:text-amber-700 rounded-lg hover:bg-amber-50"
+                                                  title="WHY（なぜこのタスクをやるのか）"
+                                                >
+                                                  <HelpCircle className="w-3.5 h-3.5" />
+                                                </button>
+                                                <button
+                                                  onClick={() => handleDeleteQuest(q.id)}
+                                                  className="p-1.5 text-stone-400 hover:text-rose-600 rounded-lg hover:bg-rose-50"
+                                                  title="削除"
+                                                >
+                                                  <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
+                                              </div>
+                                            </div>
+
+                                            {/* SubTasks (Level 4 細分化ステップ) */}
+                                            <div className="mt-2.5 pt-2 border-t border-stone-100/90">
+                                              <div className="flex items-center justify-between">
                                                 <button
                                                   type="button"
-                                                  onClick={() => handleMoveQuest(q.id, "down", msQuests)}
-                                                  className="hover:text-stone-700 p-0.2"
-                                                  title="下へ移動"
+                                                  onClick={() => toggleSubTasksExpanded(q.id)}
+                                                  className="flex items-center gap-1.5 text-[11px] font-bold text-stone-600 hover:text-stone-900"
                                                 >
-                                                  <ArrowDown className="w-2.5 h-2.5" />
+                                                  <ListChecks className="w-3.5 h-3.5 text-indigo-600" />
+                                                  <span>細分化ステップ</span>
+                                                  {subTasks.length > 0 && (
+                                                    <span className="px-1.5 py-0.2 rounded-full text-[9px] bg-indigo-50 text-indigo-700 font-mono font-black border border-indigo-200/60">
+                                                      {subCompCount}/{subTasks.length}
+                                                    </span>
+                                                  )}
+                                                  {isSubExpanded ? (
+                                                    <ChevronUp className="w-3 h-3 text-stone-400" />
+                                                  ) : (
+                                                    <ChevronDown className="w-3 h-3 text-stone-400" />
+                                                  )}
                                                 </button>
+
+                                                <button
+                                                  type="button"
+                                                  onClick={() => {
+                                                    if (!isSubExpanded) toggleSubTasksExpanded(q.id);
+                                                  }}
+                                                  className="text-[10px] font-bold text-indigo-700 bg-indigo-50/80 hover:bg-indigo-100 px-2 py-0.5 rounded-lg flex items-center gap-0.5 border border-indigo-200/50"
+                                                >
+                                                  <Plus className="w-3 h-3" /> 細分化を追加
+                                                </button>
+                                              </div>
+
+                                              {isSubExpanded && (
+                                                <div className="mt-2 space-y-1.5 pl-1.5">
+                                                  {/* SubTask Items */}
+                                                  {subTasks.map((st: SubTask) => (
+                                                    <div 
+                                                      key={st.id}
+                                                      className="flex items-center justify-between gap-2 p-1.5 rounded-lg bg-stone-50/80 hover:bg-stone-50 border border-stone-100 text-xs"
+                                                    >
+                                                      <button
+                                                        type="button"
+                                                        onClick={() => handleToggleSubTask(q.id, st.id)}
+                                                        className="flex items-center gap-2 flex-1 text-left"
+                                                      >
+                                                        {st.completed ? (
+                                                          <CheckSquare className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                                        ) : (
+                                                          <Square className="w-3.5 h-3.5 text-stone-400 shrink-0" />
+                                                        )}
+                                                        <span className={`font-medium ${st.completed ? "line-through text-stone-400" : "text-stone-700"}`}>
+                                                          {st.title}
+                                                        </span>
+                                                      </button>
+
+                                                      <button
+                                                        type="button"
+                                                        onClick={() => handleDeleteSubTask(q.id, st.id)}
+                                                        className="p-1 text-stone-300 hover:text-rose-500 rounded"
+                                                        title="ステップを削除"
+                                                      >
+                                                        <Trash2 className="w-3 h-3" />
+                                                      </button>
+                                                    </div>
+                                                  ))}
+
+                                                  {/* Quick Add SubTask Input */}
+                                                  <div className="flex items-center gap-1.5 mt-1 pt-1">
+                                                    <input
+                                                      type="text"
+                                                      value={currentSubInput}
+                                                      onChange={(e) => setNewSubTaskInputs(prev => ({ ...prev, [q.id]: e.target.value }))}
+                                                      onKeyDown={(e) => {
+                                                        if (e.key === "Enter") {
+                                                          e.preventDefault();
+                                                          handleAddSubTask(q.id);
+                                                        }
+                                                      }}
+                                                      placeholder="例: 第1章の要約を書く"
+                                                      className="flex-1 text-[11px] px-2.5 py-1 rounded-lg border border-stone-200 bg-white focus:outline-none focus:border-indigo-500 font-medium"
+                                                    />
+                                                    <button
+                                                      type="button"
+                                                      onClick={() => handleAddSubTask(q.id)}
+                                                      disabled={!currentSubInput.trim()}
+                                                      className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white text-[10px] font-bold shrink-0"
+                                                    >
+                                                      追加
+                                                    </button>
+                                                  </div>
+                                                </div>
                                               )}
                                             </div>
-                                          </div>
 
-                                          {isComp ? (
-                                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
-                                          ) : (
-                                            <Circle className="w-3.5 h-3.5 text-stone-400 shrink-0 mt-0.5" />
-                                          )}
-                                          <div>
-                                            <span className="text-xs font-bold text-stone-800 leading-tight block">
-                                              {q.title}
-                                            </span>
-                                            {q.description && (
-                                              <span className="text-[10px] text-stone-500 line-clamp-1 mt-0.5 block">
-                                                {q.description}
-                                              </span>
+                                            {/* Metric Progress Bar in Quest */}
+                                            {metric && (
+                                              <div className="mt-2.5 pt-2 border-t border-stone-100">
+                                                <div className="flex justify-between text-[10px] font-bold text-stone-600 mb-1">
+                                                  <span className="text-emerald-700">
+                                                    到達度: {metric.currentValue.toLocaleString()} / {metric.targetValue.toLocaleString()} {metric.unit} ({percent}%)
+                                                  </span>
+                                                  <button
+                                                    onClick={() => setTargetMetricItem({ id: q.id, title: q.title, metric: q.metric, levelType: "quest" })}
+                                                    className="text-[9px] font-black text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded flex items-center gap-0.5 border border-emerald-200/60"
+                                                  >
+                                                    <TrendingUp className="w-2.5 h-2.5" /> ＋進捗
+                                                  </button>
+                                                </div>
+                                                <Progress value={percent || 0} className="h-1.5 bg-stone-100 *:bg-emerald-600" />
+                                              </div>
                                             )}
                                           </div>
-                                        </div>
+                                        );
+                                      })
+                                    )}
 
-                                        <div className="flex items-center gap-1 shrink-0">
-                                          <button
-                                            onClick={() => handleOpenEditQuest(q)}
-                                            className="p-1 text-stone-400 hover:text-stone-700 rounded hover:bg-stone-50"
-                                            title="クエストを編集"
-                                          >
-                                            <Edit3 className="w-3 h-3" />
-                                          </button>
-                                          <button
-                                            onClick={() => setWhyQuest(q)}
-                                            className="p-1 text-stone-400 hover:text-amber-700 rounded hover:bg-stone-50"
-                                            title="WHY（なぜこのタスクをやるのか）"
-                                          >
-                                            <HelpCircle className="w-3 h-3" />
-                                          </button>
-                                          <button
-                                            onClick={() => handleDeleteQuest(q.id)}
-                                            className="p-1 text-stone-400 hover:text-rose-600 rounded hover:bg-stone-50"
-                                          >
-                                            <Trash2 className="w-3 h-3" />
-                                          </button>
-                                        </div>
-                                      </div>
+                                    {/* Completed Quests Dedicated Accordion (完全可視化) */}
+                                    {completedMsQuests.length > 0 && (
+                                      <div className="mt-3 pt-2 border-t border-dashed border-emerald-200">
+                                        <button
+                                          type="button"
+                                          onClick={() => toggleCompletedMs(ms.id)}
+                                          className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-emerald-50/70 hover:bg-emerald-100/70 text-emerald-900 text-xs font-bold transition-all border border-emerald-200/80 shadow-2xs"
+                                        >
+                                          <span className="flex items-center gap-1.5">
+                                            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                                            🎉 達成・完了したクエスト ({completedMsQuests.length}件)
+                                          </span>
+                                          <span className="text-[10px] text-emerald-700 font-bold bg-white/80 px-2 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
+                                            {isCompletedOpen ? "閉じる ▲" : "開く・詳細を見る ▼"}
+                                          </span>
+                                        </button>
 
-                                      {/* Metric Progress Bar in Quest */}
-                                      {metric && (
-                                        <div className="mt-2 pt-2 border-t border-stone-100">
-                                          <div className="flex justify-between text-[10px] font-bold text-stone-600 mb-1">
-                                            <span className="text-emerald-700">
-                                              {metric.currentValue.toLocaleString()} / {metric.targetValue.toLocaleString()} {metric.unit} ({percent}%)
-                                            </span>
-                                            {!isComp && (
-                                              <button
-                                                onClick={() => setTargetMetricItem({ id: q.id, title: q.title, metric: q.metric, levelType: "quest" })}
-                                                className="text-[9px] font-black text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-1.5 py-0.5 rounded flex items-center gap-0.5"
+                                        {isCompletedOpen && (
+                                          <div className="space-y-2 mt-2 pl-0.5">
+                                            {completedMsQuests.map((q) => (
+                                              <div 
+                                                key={q.id} 
+                                                className="p-3 rounded-2xl bg-white border border-emerald-200 shadow-2xs space-y-2"
                                               >
-                                                <TrendingUp className="w-2.5 h-2.5" /> ＋進捗
-                                              </button>
-                                            )}
+                                                <div className="flex items-start justify-between gap-2">
+                                                  <div className="flex items-start gap-2 flex-1">
+                                                    <div className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
+                                                      <CheckCircle2 className="w-3.5 h-3.5" />
+                                                    </div>
+                                                    <div>
+                                                      <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
+                                                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-emerald-600 text-white">
+                                                          達成完了
+                                                        </span>
+                                                        <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-mono">
+                                                          +{q.xpReward} XP / +{q.goldReward} G
+                                                        </span>
+                                                        {q.completedAt && (
+                                                          <span className="text-[10px] text-stone-500 font-mono">
+                                                            {new Date(q.completedAt).toLocaleDateString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })} 達成
+                                                          </span>
+                                                        )}
+                                                      </div>
+                                                      <span className="text-xs font-black text-stone-800 block">
+                                                        {q.title}
+                                                      </span>
+                                                      {q.description && (
+                                                        <span className="text-[11px] text-stone-600 mt-0.5 block leading-relaxed">
+                                                          {q.description}
+                                                        </span>
+                                                      )}
+                                                    </div>
+                                                  </div>
+
+                                                  <div className="flex items-center gap-1 shrink-0">
+                                                    <button
+                                                      type="button"
+                                                      onClick={() => handleReopenQuest(q.id)}
+                                                      className="px-2 py-1 rounded-lg bg-stone-50 hover:bg-stone-100 text-stone-700 text-[10px] font-bold border border-stone-200 shadow-2xs flex items-center gap-1 active:scale-95"
+                                                      title="未完了（進行中）に戻す"
+                                                    >
+                                                      <RotateCcw className="w-3 h-3 text-stone-500" />
+                                                      進行中に戻す
+                                                    </button>
+                                                    <button
+                                                      onClick={() => handleOpenEditQuest(q)}
+                                                      className="p-1 text-stone-400 hover:text-stone-700 rounded hover:bg-stone-50"
+                                                    >
+                                                      <Edit3 className="w-3 h-3" />
+                                                    </button>
+                                                    <button
+                                                      onClick={() => handleDeleteQuest(q.id)}
+                                                      className="p-1 text-stone-400 hover:text-rose-600 rounded hover:bg-stone-50"
+                                                    >
+                                                      <Trash2 className="w-3 h-3" />
+                                                    </button>
+                                                  </div>
+                                                </div>
+
+                                                {/* Subtasks summary if any */}
+                                                {q.subTasks && q.subTasks.length > 0 && (
+                                                  <div className="p-2 rounded-xl bg-stone-50 border border-stone-100 text-[10px] text-stone-600 space-y-1">
+                                                    <span className="font-bold text-stone-700 block">
+                                                      細分化ステップ ({q.subTasks.filter(st => st.completed).length}/{q.subTasks.length} 完了):
+                                                    </span>
+                                                    {q.subTasks.map(st => (
+                                                      <div key={st.id} className="flex items-center gap-1.5 text-stone-700 pl-1">
+                                                        <CheckSquare className="w-3 h-3 text-emerald-600" />
+                                                        <span>{st.title}</span>
+                                                      </div>
+                                                    ))}
+                                                  </div>
+                                                )}
+
+                                                {/* Metric summary if any */}
+                                                {q.metric && (
+                                                  <div className="p-2 rounded-xl bg-emerald-50/50 border border-emerald-100 flex items-center justify-between text-[10px]">
+                                                    <span className="font-bold text-emerald-800">
+                                                      最終数値実績: {q.metric.currentValue.toLocaleString()} / {q.metric.targetValue.toLocaleString()} {q.metric.unit}
+                                                    </span>
+                                                    <span className="text-emerald-600 font-bold font-mono">
+                                                      {Math.min(100, Math.round((q.metric.currentValue / q.metric.targetValue) * 100))}% 到達
+                                                    </span>
+                                                  </div>
+                                                )}
+                                              </div>
+                                            ))}
                                           </div>
-                                          <Progress value={percent || 0} className="h-1 bg-stone-100 *:bg-emerald-600" />
-                                        </div>
-                                      )}
-                                    </div>
-                                  );
-                                })}
-                              </div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </div>
                           );
                         })

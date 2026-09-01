@@ -18,7 +18,8 @@ import {
   FutureScene,
   Experiment,
   QuestChapter,
-  Milestone
+  Milestone,
+  SubTask
 } from "@/types";
 
 const STORAGE_PREFIX = "crestward_";
@@ -246,6 +247,80 @@ export const storage = {
     }
 
     return { quest: target, isCompleted };
+  },
+
+  // SubTasks (Level 4 Sub-division)
+  addSubTask: (questId: string, title: string): Quest | null => {
+    if (!title.trim()) return null;
+    const quests = storage.getQuests();
+    const target = quests.find(q => q.id === questId);
+    if (!target) return null;
+
+    const newSubTask: SubTask = {
+      id: `st_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      title: title.trim(),
+      completed: false,
+      createdAt: Date.now()
+    };
+
+    target.subTasks = [...(target.subTasks || []), newSubTask];
+    storage.saveQuests(quests);
+    if (target.storyId) {
+      storage.recalculateStoryProgress(target.storyId);
+    }
+    return target;
+  },
+
+  toggleSubTask: (questId: string, subTaskId: string): { quest: Quest | null; isAllCompleted: boolean } => {
+    const quests = storage.getQuests();
+    const target = quests.find(q => q.id === questId);
+    if (!target || !target.subTasks) return { quest: null, isAllCompleted: false };
+
+    target.subTasks = target.subTasks.map(st => {
+      if (st.id === subTaskId) {
+        const nextComp = !st.completed;
+        return {
+          ...st,
+          completed: nextComp,
+          completedAt: nextComp ? Date.now() : undefined
+        };
+      }
+      return st;
+    });
+
+    const isAllCompleted = target.subTasks.length > 0 && target.subTasks.every(st => st.completed);
+    storage.saveQuests(quests);
+    if (target.storyId) {
+      storage.recalculateStoryProgress(target.storyId);
+    }
+    return { quest: target, isAllCompleted };
+  },
+
+  deleteSubTask: (questId: string, subTaskId: string): Quest | null => {
+    const quests = storage.getQuests();
+    const target = quests.find(q => q.id === questId);
+    if (!target || !target.subTasks) return null;
+
+    target.subTasks = target.subTasks.filter(st => st.id !== subTaskId);
+    storage.saveQuests(quests);
+    if (target.storyId) {
+      storage.recalculateStoryProgress(target.storyId);
+    }
+    return target;
+  },
+
+  reopenQuest: (questId: string): Quest | null => {
+    const quests = storage.getQuests();
+    const target = quests.find(q => q.id === questId);
+    if (!target) return null;
+
+    target.status = "active";
+    target.completedAt = undefined;
+    storage.saveQuests(quests);
+    if (target.storyId) {
+      storage.recalculateStoryProgress(target.storyId);
+    }
+    return target;
   },
 
   // Level 1: Story Metric Updater

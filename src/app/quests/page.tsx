@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { storage } from "@/services/storage";
-import { Quest, QuestChapter, Milestone, UserSettings, MainStory, QuestDifficulty, QuestMetric, GoalProject } from "@/types";
+import { Quest, QuestChapter, Milestone, UserSettings, MainStory, QuestDifficulty, QuestMetric, GoalProject, SubTask } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,7 +23,13 @@ import {
   Crown,
   GripVertical,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  RotateCcw,
+  ListChecks,
+  ChevronUp,
+  ChevronDown,
+  CheckSquare,
+  Square
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { QuestCompletionModal } from "@/components/QuestCompletionModal";
@@ -63,6 +69,10 @@ export default function QuestsPage() {
 
   // Drag & Drop Reorder State
   const [draggedQuestId, setDraggedQuestId] = useState<string | null>(null);
+
+  // SubTasks State
+  const [expandedSubTaskQuests, setExpandedSubTaskQuests] = useState<Record<string, boolean>>({});
+  const [newSubTaskInputs, setNewSubTaskInputs] = useState<Record<string, string>>({});
 
   // Edit Quest State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -246,6 +256,34 @@ export default function QuestsPage() {
       setQuests(updated);
     }
     setDraggedQuestId(null);
+  };
+
+  const toggleSubTasksExpanded = (questId: string) => {
+    setExpandedSubTaskQuests(prev => ({ ...prev, [questId]: !prev[questId] }));
+  };
+
+  const handleAddSubTask = (questId: string) => {
+    const text = newSubTaskInputs[questId]?.trim();
+    if (!text) return;
+    storage.addSubTask(questId, text);
+    setNewSubTaskInputs(prev => ({ ...prev, [questId]: "" }));
+    setExpandedSubTaskQuests(prev => ({ ...prev, [questId]: true }));
+    loadData();
+  };
+
+  const handleToggleSubTask = (questId: string, subTaskId: string) => {
+    storage.toggleSubTask(questId, subTaskId);
+    loadData();
+  };
+
+  const handleDeleteSubTask = (questId: string, subTaskId: string) => {
+    storage.deleteSubTask(questId, subTaskId);
+    loadData();
+  };
+
+  const handleReopenQuest = (questId: string) => {
+    storage.reopenQuest(questId);
+    loadData();
   };
 
   const handleAddQuickQuest = () => {
@@ -550,6 +588,112 @@ export default function QuestsPage() {
                   </p>
                 )}
 
+                {/* SubTasks (細分化ステップ) */}
+                {(() => {
+                  const subTasks = quest.subTasks || [];
+                  const subCompCount = subTasks.filter(st => st.completed).length;
+                  const isSubExpanded = !!expandedSubTaskQuests[quest.id];
+                  const currentSubInput = newSubTaskInputs[quest.id] || "";
+
+                  return (
+                    <div className="p-2.5 rounded-xl bg-stone-50/90 border border-stone-200/70 mb-3">
+                      <div className="flex items-center justify-between">
+                        <button
+                          type="button"
+                          onClick={() => toggleSubTasksExpanded(quest.id)}
+                          className="flex items-center gap-1.5 text-[11px] font-bold text-stone-700 hover:text-stone-900"
+                        >
+                          <ListChecks className="w-3.5 h-3.5 text-indigo-600" />
+                          <span>細分化ステップ</span>
+                          {subTasks.length > 0 && (
+                            <span className="px-1.5 py-0.2 rounded-full text-[9px] bg-indigo-50 text-indigo-700 font-mono font-black border border-indigo-200/60">
+                              {subCompCount}/{subTasks.length}
+                            </span>
+                          )}
+                          {isSubExpanded ? (
+                            <ChevronUp className="w-3 h-3 text-stone-400" />
+                          ) : (
+                            <ChevronDown className="w-3 h-3 text-stone-400" />
+                          )}
+                        </button>
+
+                        {!isCompleted && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!isSubExpanded) toggleSubTasksExpanded(quest.id);
+                            }}
+                            className="text-[10px] font-bold text-indigo-700 bg-indigo-50/80 hover:bg-indigo-100 px-2 py-0.5 rounded-lg flex items-center gap-0.5 border border-indigo-200/50"
+                          >
+                            <Plus className="w-3 h-3" /> 細分化を追加
+                          </button>
+                        )}
+                      </div>
+
+                      {isSubExpanded && (
+                        <div className="mt-2 space-y-1.5 pl-1">
+                          {subTasks.map((st: SubTask) => (
+                            <div 
+                              key={st.id}
+                              className="flex items-center justify-between gap-2 p-1.5 rounded-lg bg-white border border-stone-100 text-xs"
+                            >
+                              <button
+                                type="button"
+                                onClick={() => handleToggleSubTask(quest.id, st.id)}
+                                className="flex items-center gap-2 flex-1 text-left"
+                              >
+                                {st.completed ? (
+                                  <CheckSquare className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                ) : (
+                                  <Square className="w-3.5 h-3.5 text-stone-400 shrink-0" />
+                                )}
+                                <span className={`font-medium ${st.completed ? "line-through text-stone-400" : "text-stone-700"}`}>
+                                  {st.title}
+                                </span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteSubTask(quest.id, st.id)}
+                                className="p-1 text-stone-300 hover:text-rose-500 rounded"
+                                title="ステップを削除"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ))}
+
+                          {!isCompleted && (
+                            <div className="flex items-center gap-1.5 mt-1 pt-1">
+                              <input
+                                type="text"
+                                value={currentSubInput}
+                                onChange={(e) => setNewSubTaskInputs(prev => ({ ...prev, [quest.id]: e.target.value }))}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    handleAddSubTask(quest.id);
+                                  }
+                                }}
+                                placeholder="例: 重要ポイントをノートにメモ"
+                                className="flex-1 text-[11px] px-2.5 py-1 rounded-lg border border-stone-200 bg-white focus:outline-none focus:border-indigo-500 font-medium"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleAddSubTask(quest.id)}
+                                disabled={!currentSubInput.trim()}
+                                className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white text-[10px] font-bold shrink-0"
+                              >
+                                追加
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
                 {/* Numeric Metric Progress Bar (If applicable) */}
                 {metric && (
                   <div className="p-2.5 rounded-xl bg-stone-50/80 border border-stone-200/70 mb-3">
@@ -602,9 +746,20 @@ export default function QuestsPage() {
                       達成
                     </Button>
                   ) : (
-                    <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
-                      <CheckCircle2 className="w-3.5 h-3.5" /> 達成完了
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5" /> 達成完了
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleReopenQuest(quest.id)}
+                        className="px-2 py-1 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-600 text-[10px] font-bold border border-stone-200 shadow-2xs flex items-center gap-1 active:scale-95"
+                        title="未完了（進行中）に戻す"
+                      >
+                        <RotateCcw className="w-3 h-3 text-stone-500" />
+                        進行中に戻す
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
